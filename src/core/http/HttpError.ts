@@ -38,12 +38,17 @@ export class HttpError extends Error {
   /** Vrai si le backend a renvoyé un payload conforme à ApiErrorPayload */
   isApiError(): this is HttpError & { data: ApiErrorPayload } {
     const d = this.data as Partial<ApiErrorPayload> | null
-    return !!d && typeof d === 'object' && typeof d.message === 'string' && d.success === false
+    const msg = d?.message
+    const hasMessage = typeof msg === 'string' || (Array.isArray(msg) && msg.every((m) => typeof m === 'string'))
+    return !!d && typeof d === 'object' && hasMessage && d.success === false
   }
 
   /** Extrait un message lisible pour l'utilisateur */
   toUserMessage(fallback = 'Une erreur inattendue est survenue.'): string {
-    if (this.isApiError()) return this.data.message
+    if (this.isApiError()) {
+      const msg = this.data.message
+      return Array.isArray(msg) ? msg.join(', ') : msg
+    }
     if (this.isNetworkError) return 'Connexion au serveur impossible. Vérifiez votre réseau.'
     return this.message || fallback
   }

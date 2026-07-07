@@ -44,7 +44,21 @@ export const useCommandes = () => {
     onSuccess: invalidate,
   })
 
-  return { list, create, valider, refuser, isClientUser }
+  const annuler = useMutation({
+    mutationFn: (id: string) => commandes.annuler(id),
+    onSuccess: invalidate,
+  })
+
+  const consulterParCode = useMutation({
+    mutationFn: (code: string) => commandes.consulterParCode(code),
+  })
+
+  const retirerParCode = useMutation({
+    mutationFn: (code: string) => commandes.retirerParCode(code),
+    onSuccess: invalidate,
+  })
+
+  return { list, create, valider, refuser, annuler, consulterParCode, retirerParCode, isClientUser }
 }
 
 export const useCommande = (id: string | undefined) => {

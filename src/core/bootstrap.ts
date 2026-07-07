@@ -15,14 +15,18 @@
  */
 
 import { createHttpClient, type HttpClient, type HttpClientKind } from './http'
+import { API_URL } from '../config/api'
 import {
   AuthService,
   CommandesService,
+  FileAttenteService,
   FournisseursService,
   MedicamentsService,
   NotificationsService,
   OrdonnancesService,
   PatientsService,
+  RolesService,
+  SocketService,
   StockService,
   UsersService,
   VentesService,
@@ -41,6 +45,9 @@ export interface CoreContainer {
   ordonnances: OrdonnancesService
   ventes: VentesService
   notifications: NotificationsService
+  roles: RolesService
+  fileAttente: FileAttenteService
+  socket: SocketService
   authStore: AuthStore
 }
 
@@ -53,14 +60,7 @@ export interface BootstrapOptions {
   onAuthFailure?: () => void
 }
 
-const readEnvBaseURL = (): string => {
-  try {
-    const env = (import.meta as unknown as { env?: Record<string, string> }).env
-    return env?.VITE_API_URL ?? '/api'
-  } catch {
-    return '/api'
-  }
-}
+const readEnvBaseURL = (): string => API_URL
 
 export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   // ─── 1. HTTP — câblage différé du refresh (auth service pas encore créé) ───
@@ -97,6 +97,9 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   const ordonnances = new OrdonnancesService(http)
   const ventes = new VentesService(http)
   const notifications = new NotificationsService(http)
+  const roles = new RolesService(http)
+  const fileAttente = new FileAttenteService(http)
+  const socket = new SocketService()
   authServiceRef = auth
 
   // ─── 3. Stores ──────────────────────────────────────────────────────────────
@@ -115,6 +118,9 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
     ordonnances,
     ventes,
     notifications,
+    roles,
+    fileAttente,
+    socket,
     authStore,
   }
 }

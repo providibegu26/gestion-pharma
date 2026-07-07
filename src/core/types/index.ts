@@ -12,10 +12,51 @@
 
 export type Role = 'ADMIN' | 'PHARMACIEN' | 'PREPARATEUR' | 'CAISSIER' | 'CLIENT'
 
-/** Rôle staff (excluant CLIENT), attribuable par admin via POST /users */
-export type StaffRole = 'ADMIN' | 'PHARMACIEN' | 'PREPARATEUR' | 'CAISSIER'
+/** Rôle utilisateur : rôle système ou code d'un rôle dynamique. */
+export type UserRole = Role | string
 
-export type StatutCommande = 'EN_ATTENTE' | 'VALIDEE' | 'REFUSEE'
+/** Rôle staff créable par ADMIN via POST /users */
+export type StaffRole = 'PHARMACIEN' | 'CAISSIER'
+
+// ─── Rôles dynamiques ────────────────────────────────────────────────────────
+
+export type PermissionCode =
+  | 'dashboard:view'
+  | 'produits:read'
+  | 'produits:write'
+  | 'commandes:read'
+  | 'commandes:valider'
+  | 'users:manage'
+  | 'roles:manage'
+  | 'file:view'
+  | 'file:manage'
+
+export interface RoleDefinition {
+  id: string
+  code: string
+  label: string
+  description?: string | null
+  permissions: PermissionCode[]
+  isSystem: boolean
+  userCount?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRolePayload {
+  code: string
+  label: string
+  description?: string
+  permissions: PermissionCode[]
+}
+
+export type UpdateRolePayload = Partial<CreateRolePayload>
+
+export interface AssignRolePayload {
+  role: UserRole
+}
+
+export type StatutCommande = 'EN_ATTENTE' | 'PRETE' | 'RETIREE' | 'REFUSEE'
 
 // ─── Wrappers API ────────────────────────────────────────────────────────────
 
@@ -28,7 +69,7 @@ export interface ApiResponse<T> {
 export interface ApiErrorPayload {
   success: false
   statusCode: number
-  message: string
+  message: string | string[]
   timestamp: string
   path: string
 }
@@ -40,9 +81,46 @@ export interface User {
   nom: string
   prenom: string
   email: string
-  role: Role
+  role: UserRole
   createdAt: string
   updatedAt: string
+}
+
+// ─── File d'attente ──────────────────────────────────────────────────────────
+
+export type TypeServiceFile = 'PHARMACIE' | 'CAISSE'
+
+export type StatutFile = 'EN_ATTENTE' | 'APPELE' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
+
+export interface TicketFile {
+  id: string
+  numero: number
+  statut: StatutFile
+  typeService: TypeServiceFile
+  userId?: string
+  clientId?: string
+  clientNom?: string
+  commandeId?: string
+  createdAt: string
+  appeleAt?: string | null
+  termineAt?: string | null
+}
+
+export interface FileAttenteStats {
+  pharmacie?: { enAttente: number; enCours: number; termines: number; annules?: number }
+  caisse?: { enAttente: number; enCours: number; termines: number; annules?: number }
+  total?: number
+}
+
+export interface RejoindreFilePayload {
+  typeService?: TypeServiceFile
+}
+
+export interface FileAttenteState {
+  tickets: TicketFile[]
+  enCours: TicketFile | null
+  prochain: TicketFile | null
+  stats?: FileAttenteStats
 }
 
 export interface LoginPayload {
@@ -58,19 +136,19 @@ export interface RegisterClientPayload {
   motDePasse: string
 }
 
-/** Création d'un compte staff par l'ADMIN — pas de mot de passe (généré + envoyé par email) */
+/** Création d'un compte staff par le PHARMACIEN — mot de passe généré + envoyé par email */
 export interface CreateStaffUserPayload {
   nom: string
   prenom: string
   email: string
-  role: StaffRole
+  role: UserRole
 }
 
 export interface UpdateUserPayload {
   nom?: string
   prenom?: string
   email?: string
-  role?: StaffRole
+  role?: UserRole
 }
 
 export interface ChangePasswordPayload {
@@ -103,7 +181,13 @@ export interface Commande {
   statut: StatutCommande
   note?: string | null
   motifRefus?: string | null
-  validatedAt?: string | null
+  refuseAutomatique?: boolean
+  codeRetrait?: string | null
+  qrImage?: string | null
+  payloadQr?: string | null
+  montantTotal?: string | null
+  preteAt?: string | null
+  retireeAt?: string | null
   refusedAt?: string | null
   createdAt: string
   updatedAt: string
@@ -123,6 +207,10 @@ export interface CreateCommandePayload {
 
 export interface RefuserCommandePayload {
   motifRefus: string
+}
+
+export interface ConsulterCommandeCodePayload {
+  code: string
 }
 
 export interface CreateMedicamentPayload {
@@ -335,6 +423,22 @@ export interface StockAlerteEvent {
   quantite: number
   seuilMinimum: number
   message: string
+  timestamp: string
+}
+
+export interface CommandeNotificationEvent {
+  commandeId: string
+  statut: StatutCommande
+  message: string
+  timestamp: string
+}
+
+export interface FileAttenteEvent {
+  ticketId: string
+  statut: StatutFile
+  numero: number
+  typeService: TypeServiceFile
+  message?: string
   timestamp: string
 }
 

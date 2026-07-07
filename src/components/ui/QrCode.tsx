@@ -5,12 +5,18 @@ interface QrCodeProps {
   value: string
   size?: number
   label?: string
+  /** Image QR fournie par le backend (data URL ou URL) — prioritaire sur la génération locale */
+  imageSrc?: string | null
 }
 
-export const QrCode = ({ value, size = 180, label }: QrCodeProps) => {
-  const [src, setSrc] = useState('')
+export const QrCode = ({ value, size = 180, label, imageSrc }: QrCodeProps) => {
+  const [src, setSrc] = useState(imageSrc ?? '')
 
   useEffect(() => {
+    if (imageSrc) {
+      setSrc(imageSrc)
+      return
+    }
     let mounted = true
     QRCode.toDataURL(value, {
       width: size,
@@ -21,7 +27,7 @@ export const QrCode = ({ value, size = 180, label }: QrCodeProps) => {
       if (mounted) setSrc(url)
     })
     return () => { mounted = false }
-  }, [value, size])
+  }, [value, size, imageSrc])
 
   return (
     <div className="inline-flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-3 shadow-soft">

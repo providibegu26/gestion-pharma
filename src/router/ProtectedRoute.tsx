@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import type { Role } from '@/core'
 
 interface ProtectedRouteProps {
-  roles?: Role[]
+  roles?: (Role | string)[]
 }
 
 export const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {

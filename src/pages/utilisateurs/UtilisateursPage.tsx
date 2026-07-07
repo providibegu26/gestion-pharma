@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, Shield, Mail, AlertTriangle, KeyRound } from 'lucide-react'
-import { useAuth, useApiError, useUsers } from '@/adapters/react'
+import { useAuth, useApiError, useUsers, useRoles } from '@/adapters/react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { GlassCard } from '@/components/ui/GlassCard'
@@ -11,18 +11,26 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { toast } from '@/components/ui/Toast'
 import { formatDateShort, getRoleColor, getRoleLabel, getInitials } from '@/utils/helpers'
-import type { User, StaffRole, CreateStaffUserPayload, UpdateUserPayload } from '@/core'
+import type { User, StaffRole, UserRole, CreateStaffUserPayload, UpdateUserPayload } from '@/core'
+import { isSystemRole } from '@/config/permissions'
 
-const roleOptions = [
+const STAFF_ROLE_OPTIONS: { value: StaffRole; label: string }[] = [
+  { value: 'PHARMACIEN', label: 'Pharmacien' },
   { value: 'CAISSIER',    label: 'Caissier' },
-  { value: 'PHARMACIEN',  label: 'Pharmacien' },
-  { value: 'ADMIN',       label: 'Administrateur' },
 ]
 
 export const UtilisateursPage = () => {
   const { user: currentUser } = useAuth()
   const { getErrorMessage } = useApiError()
   const { list, create, update, remove } = useUsers()
+  const { list: rolesList } = useRoles()
+
+  const roleOptions: { value: string; label: string }[] = [
+    ...STAFF_ROLE_OPTIONS,
+    ...(rolesList.data ?? [])
+      .filter((r) => !r.isSystem && !isSystemRole(r.code))
+      .map((r) => ({ value: r.code, label: r.label })),
+  ]
 
   const [modal, setModal] = useState<'create' | 'edit' | 'delete' | null>(null)
   const [selected, setSelected] = useState<User | null>(null)
@@ -58,7 +66,7 @@ export const UtilisateursPage = () => {
 
   const openEdit = (u: User) => {
     setSelected(u)
-    setEditForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role === 'CLIENT' ? 'CAISSIER' : u.role })
+    setEditForm({ nom: u.nom, prenom: u.prenom, email: u.email, role: u.role as StaffRole })
     setModal('edit')
   }
 
@@ -164,7 +172,7 @@ export const UtilisateursPage = () => {
             <Input label="Nom"    value={createForm.nom}    onChange={(e) => setCreateForm(f => ({ ...f, nom: e.target.value }))}    placeholder="Mukeba" />
           </div>
           <Input label="Email" type="email" value={createForm.email} onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))} placeholder="marie.mukeba@pharmacie.cd" hint="Le mot de passe temporaire sera envoyé à cette adresse" />
-          <Select label="Rôle" value={createForm.role} onChange={(e) => setCreateForm(f => ({ ...f, role: e.target.value as StaffRole }))} options={roleOptions} />
+          <Select label="Rôle" value={String(createForm.role)} onChange={(e) => setCreateForm(f => ({ ...f, role: e.target.value }))} options={roleOptions} />
           <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
             <Button variant="ghost" type="button" onClick={() => setModal(null)}>Annuler</Button>
             <Button type="submit" loading={createMut.isPending}>
@@ -186,7 +194,7 @@ export const UtilisateursPage = () => {
             <Input label="Nom"    value={editForm.nom ?? ''}    onChange={(e) => setEditForm(f => ({ ...f, nom: e.target.value }))} />
           </div>
           <Input  label="Email" type="email" value={editForm.email ?? ''} onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))} />
-          <Select label="Rôle"  value={editForm.role ?? ''} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value as StaffRole }))} options={roleOptions} />
+          <Select label="Rôle"  value={String(editForm.role ?? '')} onChange={(e) => setEditForm(f => ({ ...f, role: e.target.value as UserRole }))} options={roleOptions} />
           <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
             <Button variant="ghost" type="button" onClick={() => setModal(null)}>Annuler</Button>
             <Button type="submit" loading={updateMut.isPending}>Sauvegarder</Button>

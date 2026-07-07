@@ -180,7 +180,10 @@ export class FetchHttpClient implements HttpClient {
     } catch { /* corps illisible — on ignore */ }
     const message =
       (typeof data === 'object' && data && 'message' in (data as Record<string, unknown>)
-        ? String((data as Record<string, unknown>).message)
+        ? (() => {
+            const m = (data as Record<string, unknown>).message
+            return Array.isArray(m) ? m.join(', ') : String(m)
+          })()
         : response.statusText) || `HTTP ${response.status}`
     return new HttpError({
       message,

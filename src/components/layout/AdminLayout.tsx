@@ -1,33 +1,25 @@
-import { Shield, ShoppingBag, Pill } from 'lucide-react'
-import { useAuth } from '@/adapters/react'
+import { useAuth, useRoles } from '@/adapters/react'
 import { RoleAppLayout } from './RoleAppLayout'
-import type { NavItemDef } from './RoleSidebar'
-
-const ICON = 18
-
-const staffNav: NavItemDef[] = [
-  { to: '/professionnel/produits',    icon: <Pill size={ICON} />,        label: 'Produits',    section: 'Catalogue' },
-  { to: '/professionnel/commandes',   icon: <ShoppingBag size={ICON} />, label: 'Commandes',   section: 'Opérations' },
-  { to: '/professionnel/utilisateurs', icon: <Shield size={ICON} />,      label: 'Personnel',   section: 'Administration' },
-]
-
-const clientNav: NavItemDef[] = [
-  { to: '/client/produits',  icon: <Pill size={ICON} />,        label: 'Produits',      section: 'Espace client' },
-  { to: '/client/commandes', icon: <ShoppingBag size={ICON} />, label: 'Mes commandes', section: 'Espace client' },
-]
+import { getNavForRole } from '@/config/navigation'
+import { getRoleUIConfig } from '@/config/roleConfig'
 
 export const AdminLayout = () => {
-  const { isClient } = useAuth()
-  const isClientUser = isClient()
+  const { user, isClient } = useAuth()
+  const { list: rolesList } = useRoles({ enabled: !!user && !isClient() })
+
+  const role = user?.role ?? 'CLIENT'
+  const config = getRoleUIConfig(role)
+  const navItems = getNavForRole(role, rolesList.data)
 
   return (
     <RoleAppLayout
-      navItems={isClientUser ? clientNav : staffNav}
+      navItems={navItems}
       brand={{
         title: 'PharmaDigital',
-        subtitle: isClientUser ? 'Espace Client' : 'Espace Personnel',
+        subtitle: config.brandSubtitle,
       }}
-      accent={isClientUser ? 'teal' : 'violet'}
+      accent={config.accent}
+      promo={config.promo}
     />
   )
 }

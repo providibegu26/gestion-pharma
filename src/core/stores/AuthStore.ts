@@ -78,27 +78,27 @@ export class AuthStore extends Observable<AuthState> {
   // ─── Sélecteurs ──────────────────────────────────────────────────────────
 
   getUser = (): User | null => this.getState().user
-  hasRole = (...roles: Role[]): boolean => {
+  hasRole = (...roles: (Role | string)[]): boolean => {
     const u = this.getUser()
     return !!u && roles.includes(u.role)
   }
-  isAdmin       = (): boolean => this.hasRole('ADMIN')
+  isAdmin       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN')
   isPharmacien  = (): boolean => this.hasRole('PHARMACIEN')
-  isPreparateur = (): boolean => false
-  isCaissier    = (): boolean => this.hasRole('ADMIN', 'CAISSIER')
+  isPreparateur = (): boolean => this.hasRole('PREPARATEUR')
+  isCaissier    = (): boolean => this.hasRole('CAISSIER')
   isClient      = (): boolean => this.hasRole('CLIENT')
-  isStaff       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN', 'CAISSIER')
+  isStaff       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN', 'CAISSIER', 'PREPARATEUR')
   isProfessionnel = (): boolean => !this.isClient() && this.getUser() !== null
 
   /** Route d'accueil par défaut selon le rôle. */
   homeForRole = (): string => {
     const role = this.getUser()?.role
     switch (role) {
-      case 'ADMIN':       return '/professionnel'
+      case 'ADMIN':       return '/professionnel/dashboard'
       case 'PHARMACIEN':
-      case 'CAISSIER':    return '/professionnel'
+      case 'CAISSIER':    return '/professionnel/dashboard'
       case 'PREPARATEUR': return '/login-staff'
-      case 'CLIENT':      return '/client/produits'
+      case 'CLIENT':      return '/client/dashboard'
       default:            return '/login-staff'
     }
   }

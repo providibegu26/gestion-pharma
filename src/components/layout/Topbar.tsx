@@ -12,12 +12,16 @@ interface TopbarProps {
 const defaultTitles: Record<string, string> = {
   '/admin':                     'Centre de contrôle',
   '/professionnel':             'Espace professionnel',
+  '/professionnel/dashboard':   'Tableau de bord',
   '/professionnel/produits':    'Produits',
   '/professionnel/utilisateurs':'Personnel',
   '/professionnel/commandes':   'Commandes clients',
+  '/professionnel/file-attente':'File d\'attente',
+  '/professionnel/roles':       'Gestion des rôles',
   '/admin/utilisateurs':        'Personnel',
   '/admin/commandes':           'Commandes clients',
   '/client':                    'Mon espace',
+  '/client/dashboard':          'Tableau de bord',
   '/client/produits':           'Produits',
   '/client/commandes':          'Mes commandes',
 }

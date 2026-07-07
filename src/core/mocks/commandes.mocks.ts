@@ -81,11 +81,15 @@ export const registerCommandesMocks = (register: RegisterMockFn): void => {
       })
     }
     const cmdId = uid('cmd')
+    const codeRetrait = `CMD-${cmdId.slice(-6).toUpperCase()}`
     const created: Commande = {
       id: cmdId,
       clientId: me.id,
       statut: 'EN_ATTENTE',
       note: payload.note ?? null,
+      codeRetrait,
+      payloadQr: `PHARMACIE-COMMANDE:${cmdId}`,
+      montantTotal: null,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       client: { id: me.id, nom: me.nom, prenom: me.prenom, email: me.email },
@@ -112,8 +116,8 @@ export const registerCommandesMocks = (register: RegisterMockFn): void => {
         url: `/commandes/${c.id}/valider`,
       })
     }
-    c.statut = 'VALIDEE'
-    c.validatedAt = nowIso()
+    c.statut = 'PRETE'
+    c.preteAt = nowIso()
     c.updatedAt = nowIso()
     return ok(c, 'Commande validée.')
   })

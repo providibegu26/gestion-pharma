@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createCore } from '@/core'
-import { ServicesProvider, useAuth } from '@/adapters/react'
+import { ServicesProvider, useAuth, useNotifications } from '@/adapters/react'
 import { AppRouter } from './router/AppRouter'
 import { ToastContainer } from './components/ui/Toast'
 
@@ -20,6 +20,7 @@ const queryClient = new QueryClient({
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initAuth } = useAuth()
   const initialized = useRef(false)
+  useNotifications()
 
   useEffect(() => {
     if (initialized.current) return
