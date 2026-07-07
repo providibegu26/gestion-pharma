@@ -15,28 +15,29 @@
  */
 
 import { createHttpClient, type HttpClient, type HttpClientKind } from './http'
-import { API_URL } from '../config/api'
 import {
   AuthService,
+  CodesQrService,
   CommandesService,
-  FileAttenteService,
   FournisseursService,
   MedicamentsService,
   NotificationsService,
   OrdonnancesService,
   PatientsService,
+  QueueService,
   RolesService,
-  SocketService,
   StockService,
   UsersService,
   VentesService,
 } from './services'
 import { AuthStore } from './stores'
+import { QueueStore } from './queue'
 
 export interface CoreContainer {
   http: HttpClient
   auth: AuthService
   users: UsersService
+  roles: RolesService
   commandes: CommandesService
   medicaments: MedicamentsService
   patients: PatientsService
@@ -45,10 +46,13 @@ export interface CoreContainer {
   ordonnances: OrdonnancesService
   ventes: VentesService
   notifications: NotificationsService
-  roles: RolesService
-  fileAttente: FileAttenteService
-  socket: SocketService
+  queue: QueueService
+  codesQr: CodesQrService
   authStore: AuthStore
+  /** File d'attente locale (fallback démontrable si /file-attente est indisponible). */
+  queueStore: QueueStore
+  /** URL du serveur WebSocket temps réel (Socket.IO). */
+  wsUrl: string
 }
 
 export interface BootstrapOptions {
@@ -60,7 +64,34 @@ export interface BootstrapOptions {
   onAuthFailure?: () => void
 }
 
-const readEnvBaseURL = (): string => API_URL
+const readEnv = (): Record<string, string> => {
+  try {
+    return (import.meta as unknown as { env?: Record<string, string> }).env ?? {}
+  } catch {
+    return {}
+  }
+}
+
+const readEnvBaseURL = (): string => readEnv().VITE_API_URL ?? '/api'
+
+/**
+ * URL du serveur WebSocket (Socket.IO).
+ *  1. VITE_WS_URL si défini explicitement → utilisé tel quel.
+ *  2. VITE_API_URL absolu (http://host:port/api → http://host:port).
+ *  3. Sinon (mode proxy Vite, VITE_API_URL vide) → chaîne vide : temps réel désactivé.
+ *     Dans ce cas, le RealtimeBridge ne tente pas de connexion et l'app reste fonctionnelle.
+ *
+ * Chaîne vide = temps réel désactivé (repli silencieux).
+ */
+const readEnvWsURL = (): string => {
+  const env = readEnv()
+  if (env.VITE_WS_URL) return env.VITE_WS_URL
+  const api = env.VITE_API_URL ?? ''
+  const m = api.match(/^(https?:\/\/[^/]+)/)
+  // En mode proxy Vite (VITE_API_URL vide ou relatif), on ne peut pas déduire l'URL WS :
+  // Socket.IO doit se connecter directement au backend, pas à Vite. On désactive.
+  return m ? m[1] : ''
+}
 
 export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   // ─── 1. HTTP — câblage différé du refresh (auth service pas encore créé) ───
@@ -89,6 +120,7 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   // ─── 2. Services ────────────────────────────────────────────────────────────
   const auth = new AuthService(http)
   const users = new UsersService(http)
+  const roles = new RolesService(http)
   const commandes = new CommandesService(http)
   const medicaments = new MedicamentsService(http)
   const patients = new PatientsService(http)
@@ -97,19 +129,20 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   const ordonnances = new OrdonnancesService(http)
   const ventes = new VentesService(http)
   const notifications = new NotificationsService(http)
-  const roles = new RolesService(http)
-  const fileAttente = new FileAttenteService(http)
-  const socket = new SocketService()
+  const queue = new QueueService(http)
+  const codesQr = new CodesQrService(http)
   authServiceRef = auth
 
   // ─── 3. Stores ──────────────────────────────────────────────────────────────
   const authStore = new AuthStore(auth)
   authStoreRef = authStore
+  const queueStore = new QueueStore()
 
   return {
     http,
     auth,
     users,
+    roles,
     commandes,
     medicaments,
     patients,
@@ -118,9 +151,10 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
     ordonnances,
     ventes,
     notifications,
-    roles,
-    fileAttente,
-    socket,
+    queue,
+    codesQr,
     authStore,
+    queueStore,
+    wsUrl: readEnvWsURL(),
   }
 }

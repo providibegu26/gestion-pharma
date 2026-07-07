@@ -6,6 +6,7 @@ import type { HttpClient } from '../http'
 import type {
   ApiResponse,
   CreateVentePayload,
+  VenteCodeQr,
   VenteDetail,
 } from '../types'
 
@@ -34,6 +35,13 @@ export class VentesService {
    */
   downloadTicket(id: string): Promise<Blob> {
     return this.http.get<Blob>(`/ventes/${id}/ticket`, { responseType: 'blob' })
+  }
+
+  /** Codes QR unitaires générés pour la vente (1 par unité vendue) */
+  codesQr(id: string): Promise<VenteCodeQr[]> {
+    return this.http
+      .get<ApiResponse<VenteCodeQr[]>>(`/ventes/${id}/codes-qr`)
+      .then((r) => r.data)
   }
 }
 

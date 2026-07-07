@@ -1,24 +1,58 @@
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  useRoles — Hook React encapsulant le RolesService (/roles)
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  Le backend n'expose pas encore /roles. En cas d'échec de la requête, le hook
+ *  bascule sur un FALLBACK en lecture seule dérivé du registre core/permissions
+ *  (les rôles "système"). L'UI reste ainsi fonctionnelle et informative.
+ *
+ *  Quand le backend fournira /roles, le CRUD deviendra automatiquement actif
+ *  sans aucune modification de la page.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AssignRolePayload, CreateRolePayload, UpdateRolePayload } from '@/core'
+import {
+  ROLE_REGISTRY,
+  type CreateRolePayload,
+  type ManagedRole,
+  type RoleDefinition,
+  type UpdateRolePayload,
+} from '@/core'
 import { useServices } from '../ServicesContext'
 
 const ROLES_KEY = ['roles'] as const
 
-interface UseRolesOptions {
-  enabled?: boolean
-}
+/** Rôles "système" dérivés du registre (fallback lecture seule). */
+const registryRoles = (): ManagedRole[] =>
+  (Object.values(ROLE_REGISTRY) as RoleDefinition[])
+    .filter((r) => !r.hidden)
+    .map((r) => ({
+      id: r.key,
+      nom: r.key,
+      label: r.label,
+      description: r.description,
+      permissions: r.permissions,
+      systeme: true,
+    }))
 
-export const useRoles = (opts: UseRolesOptions = {}) => {
+export const useRoles = () => {
   const qc = useQueryClient()
   const { roles } = useServices()
-  const enabled = opts.enabled ?? true
 
   const list = useQuery({
     queryKey: ROLES_KEY,
     queryFn: () => roles.list(),
-    enabled,
-    staleTime: 60_000,
+    retry: false,
   })
+
+  // Fallback : si la requête a échoué (404/route absente), on affiche les rôles
+  // système du registre en lecture seule.
+  const fallback = useMemo(() => registryRoles(), [])
+  const isBackendAvailable = list.isSuccess
+  const isReadOnly = list.isError
+  const data: ManagedRole[] = list.data ?? (list.isError ? fallback : [])
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ROLES_KEY })
 
@@ -37,23 +71,5 @@ export const useRoles = (opts: UseRolesOptions = {}) => {
     onSuccess: invalidate,
   })
 
-  const assignToUser = useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: AssignRolePayload }) =>
-      roles.assignToUser(userId, data),
-    onSuccess: () => {
-      invalidate()
-      qc.invalidateQueries({ queryKey: ['users'] })
-    },
-  })
-
-  return { list, create, update, remove, assignToUser }
-}
-
-export const useRole = (id: string | undefined) => {
-  const { roles } = useServices()
-  return useQuery({
-    queryKey: ['roles', id],
-    queryFn: () => roles.getById(id as string),
-    enabled: !!id,
-  })
+  return { list, data, isBackendAvailable, isReadOnly, create, update, remove }
 }

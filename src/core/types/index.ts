@@ -12,50 +12,13 @@
 
 export type Role = 'ADMIN' | 'PHARMACIEN' | 'PREPARATEUR' | 'CAISSIER' | 'CLIENT'
 
-/** Rôle utilisateur : rôle système ou code d'un rôle dynamique. */
-export type UserRole = Role | string
+/** Rôle staff (excluant CLIENT), attribuable par admin via POST /users */
+export type StaffRole = 'ADMIN' | 'PHARMACIEN' | 'PREPARATEUR' | 'CAISSIER'
 
-/** Rôle staff créable par ADMIN via POST /users */
-export type StaffRole = 'PHARMACIEN' | 'CAISSIER'
-
-// ─── Rôles dynamiques ────────────────────────────────────────────────────────
-
-export type PermissionCode =
-  | 'dashboard:view'
-  | 'produits:read'
-  | 'produits:write'
-  | 'commandes:read'
-  | 'commandes:valider'
-  | 'users:manage'
-  | 'roles:manage'
-  | 'file:view'
-  | 'file:manage'
-
-export interface RoleDefinition {
-  id: string
-  code: string
-  label: string
-  description?: string | null
-  permissions: PermissionCode[]
-  isSystem: boolean
-  userCount?: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface CreateRolePayload {
-  code: string
-  label: string
-  description?: string
-  permissions: PermissionCode[]
-}
-
-export type UpdateRolePayload = Partial<CreateRolePayload>
-
-export interface AssignRolePayload {
-  role: UserRole
-}
-
+/**
+ * Cycle de vie backend : EN_ATTENTE → PRETE (validation, stock déduit)
+ * → RETIREE (scan QR retrait) | REFUSEE (manuel ou auto si stock insuffisant).
+ */
 export type StatutCommande = 'EN_ATTENTE' | 'PRETE' | 'RETIREE' | 'REFUSEE'
 
 // ─── Wrappers API ────────────────────────────────────────────────────────────
@@ -69,7 +32,7 @@ export interface ApiResponse<T> {
 export interface ApiErrorPayload {
   success: false
   statusCode: number
-  message: string | string[]
+  message: string
   timestamp: string
   path: string
 }
@@ -81,46 +44,9 @@ export interface User {
   nom: string
   prenom: string
   email: string
-  role: UserRole
+  role: Role
   createdAt: string
   updatedAt: string
-}
-
-// ─── File d'attente ──────────────────────────────────────────────────────────
-
-export type TypeServiceFile = 'PHARMACIE' | 'CAISSE'
-
-export type StatutFile = 'EN_ATTENTE' | 'APPELE' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
-
-export interface TicketFile {
-  id: string
-  numero: number
-  statut: StatutFile
-  typeService: TypeServiceFile
-  userId?: string
-  clientId?: string
-  clientNom?: string
-  commandeId?: string
-  createdAt: string
-  appeleAt?: string | null
-  termineAt?: string | null
-}
-
-export interface FileAttenteStats {
-  pharmacie?: { enAttente: number; enCours: number; termines: number; annules?: number }
-  caisse?: { enAttente: number; enCours: number; termines: number; annules?: number }
-  total?: number
-}
-
-export interface RejoindreFilePayload {
-  typeService?: TypeServiceFile
-}
-
-export interface FileAttenteState {
-  tickets: TicketFile[]
-  enCours: TicketFile | null
-  prochain: TicketFile | null
-  stats?: FileAttenteStats
 }
 
 export interface LoginPayload {
@@ -136,25 +62,50 @@ export interface RegisterClientPayload {
   motDePasse: string
 }
 
-/** Création d'un compte staff par le PHARMACIEN — mot de passe généré + envoyé par email */
+/** Création d'un compte staff par l'ADMIN — pas de mot de passe (généré + envoyé par email) */
 export interface CreateStaffUserPayload {
   nom: string
   prenom: string
   email: string
-  role: UserRole
+  role: StaffRole
 }
 
 export interface UpdateUserPayload {
   nom?: string
   prenom?: string
   email?: string
-  role?: UserRole
+  role?: StaffRole
 }
 
 export interface ChangePasswordPayload {
   ancienMotDePasse: string
   nouveauMotDePasse: string
 }
+
+// ─── Rôles gérés (endpoint /roles — préparé, pas encore exposé par le backend) ─
+
+export interface ManagedRole {
+  id: string
+  /** Clé technique du rôle (ex. "PHARMACIEN"). */
+  nom: string
+  label?: string
+  description?: string
+  /** Permissions accordées (clés de `Permission`). */
+  permissions?: string[]
+  /** Rôle système : non supprimable / non éditable. */
+  systeme?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface CreateRolePayload {
+  nom: string
+  label?: string
+  description?: string
+  permissions?: string[]
+}
+
+export type UpdateRolePayload = Partial<CreateRolePayload>
 
 // ─── Commandes ───────────────────────────────────────────────────────────────
 
@@ -181,18 +132,34 @@ export interface Commande {
   statut: StatutCommande
   note?: string | null
   motifRefus?: string | null
+  /** True si le refus a été déclenché automatiquement (stock insuffisant). */
   refuseAutomatique?: boolean
-  codeRetrait?: string | null
-  qrImage?: string | null
-  payloadQr?: string | null
+  /** Montant total calculé par le backend (chaîne décimale). */
   montantTotal?: string | null
-  preteAt?: string | null
-  retireeAt?: string | null
+  /** Code de retrait unique de la commande (ex. "CMD-A3F2-9B1C"). */
+  codeRetrait?: string | null
+  /** Image QR encodée en base64 (data URL) fournie par le backend. */
+  qrImage?: string | null
+  /** Contenu textuel du QR (ex. "PHARMACIE-COMMANDE:CMD-..."). */
+  payloadQr?: string | null
+  retraitAt?: string | null
+  validatedAt?: string | null
   refusedAt?: string | null
   createdAt: string
   updatedAt: string
   client?: Pick<User, 'id' | 'nom' | 'prenom' | 'email'>
   lignes: LigneCommande[]
+}
+
+/** Payload de scan d'un QR commande (code brut ou payload complet). */
+export interface CommandeCodePayload {
+  code: string
+}
+
+/** Résultat de la consultation d'un QR commande avant retrait. */
+export interface CommandeCodeInfo {
+  commande: Commande
+  utilisable?: boolean
 }
 
 export interface LigneCommandePayload {
@@ -207,10 +174,6 @@ export interface CreateCommandePayload {
 
 export interface RefuserCommandePayload {
   motifRefus: string
-}
-
-export interface ConsulterCommandeCodePayload {
-  code: string
 }
 
 export interface CreateMedicamentPayload {
@@ -415,6 +378,90 @@ export interface VenteDetail extends Vente {
   ordonnance?: Ordonnance
 }
 
+// ─── File d'attente (endpoint /file-attente) ─────────────────────────────────
+
+/** Guichet de service. */
+export type TypeService = 'PHARMACIE' | 'CAISSE'
+
+/** Statuts backend d'un ticket de file d'attente. */
+export type QueueStatut = 'EN_ATTENTE' | 'APPELE' | 'EN_COURS' | 'TERMINE' | 'ANNULE'
+
+export interface QueueTicket {
+  id: string
+  /** Numéro d'ordre automatique affiché au client. */
+  numeroTicket: number
+  typeService: TypeService
+  statut: QueueStatut
+  /** Nom affiché (client connecté ou saisi à la borne). */
+  nomAffiche?: string | null
+  /** Position courante dans la file (recalculée par le backend). */
+  position?: number | null
+  /** Estimation d'attente en minutes. */
+  estimeeMinutes?: number | null
+  clientId?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** CLIENT connecté — rejoindre la file. */
+export interface JoinQueuePayload {
+  typeService: TypeService
+}
+
+/** Borne publique — rejoindre sans compte. */
+export interface JoinQueuePublicPayload {
+  typeService: TypeService
+  nomAffiche: string
+}
+
+/** Position d'un client dans la file (GET /file-attente/ma-position). */
+export interface QueuePosition {
+  numeroTicket?: number
+  positionActuelle: number
+  estimeeMinutes: number
+  statut: QueueStatut
+}
+
+/** Compteurs d'un guichet. */
+export interface QueueServiceStats {
+  enAttente: number
+  enCours: number
+  estimeeProchaine: number
+}
+
+/** Statistiques globales des deux files (GET /file-attente/stats). */
+export interface QueueStats {
+  pharmacie: QueueServiceStats
+  caisse: QueueServiceStats
+}
+
+// ─── Codes QR ventes (unitaires — module /codes-qr) ──────────────────────────
+
+export type CodeQrStatut = 'ACTIF' | 'UTILISE' | 'EXPIRE'
+
+export interface VenteCodeQr {
+  code: string
+  statut: CodeQrStatut
+  payload?: string
+  qrImage?: string
+  medicament?: MedicamentLite
+}
+
+/** Payload de scan d'un code QR vente. */
+export interface CodeQrPayload {
+  code: string
+}
+
+/** Résultat de la consultation d'un code QR vente. */
+export interface CodeQrInfo {
+  code: string
+  utilisable: boolean
+  statut: CodeQrStatut
+  medicament?: MedicamentLite
+  patient?: Pick<Patient, 'id' | 'nom' | 'prenom'>
+  vente?: Pick<Vente, 'id' | 'montantTotal' | 'devise' | 'createdAt'>
+}
+
 // ─── Notifications WebSocket ────────────────────────────────────────────────
 
 export interface StockAlerteEvent {
@@ -423,22 +470,6 @@ export interface StockAlerteEvent {
   quantite: number
   seuilMinimum: number
   message: string
-  timestamp: string
-}
-
-export interface CommandeNotificationEvent {
-  commandeId: string
-  statut: StatutCommande
-  message: string
-  timestamp: string
-}
-
-export interface FileAttenteEvent {
-  ticketId: string
-  statut: StatutFile
-  numero: number
-  typeService: TypeServiceFile
-  message?: string
   timestamp: string
 }
 

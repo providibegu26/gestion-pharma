@@ -19,6 +19,7 @@ import type {
   Role,
   User,
 } from '../types'
+import { getRoleDefinition } from '../permissions'
 import { Observable } from './Observable'
 
 const STORAGE_KEY = 'pharma-auth'
@@ -78,29 +79,23 @@ export class AuthStore extends Observable<AuthState> {
   // ─── Sélecteurs ──────────────────────────────────────────────────────────
 
   getUser = (): User | null => this.getState().user
-  hasRole = (...roles: (Role | string)[]): boolean => {
+  hasRole = (...roles: Role[]): boolean => {
     const u = this.getUser()
     return !!u && roles.includes(u.role)
   }
-  isAdmin       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN')
+  isAdmin       = (): boolean => this.hasRole('ADMIN')
   isPharmacien  = (): boolean => this.hasRole('PHARMACIEN')
-  isPreparateur = (): boolean => this.hasRole('PREPARATEUR')
-  isCaissier    = (): boolean => this.hasRole('CAISSIER')
+  isPreparateur = (): boolean => false
+  isCaissier    = (): boolean => this.hasRole('ADMIN', 'CAISSIER')
   isClient      = (): boolean => this.hasRole('CLIENT')
-  isStaff       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN', 'CAISSIER', 'PREPARATEUR')
+  isStaff       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN', 'CAISSIER')
   isProfessionnel = (): boolean => !this.isClient() && this.getUser() !== null
 
-  /** Route d'accueil par défaut selon le rôle. */
+  /** Route d'accueil par défaut selon le rôle (déléguée au registre). */
   homeForRole = (): string => {
     const role = this.getUser()?.role
-    switch (role) {
-      case 'ADMIN':       return '/professionnel/dashboard'
-      case 'PHARMACIEN':
-      case 'CAISSIER':    return '/professionnel/dashboard'
-      case 'PREPARATEUR': return '/login-staff'
-      case 'CLIENT':      return '/client/dashboard'
-      default:            return '/login-staff'
-    }
+    if (!role) return '/login-staff'
+    return getRoleDefinition(role).home
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────

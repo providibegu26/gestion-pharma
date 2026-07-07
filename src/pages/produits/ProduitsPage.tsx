@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination } from '@/components/ui/Pagination'
 import { toast } from '@/components/ui/Toast'
 import type { CreateCommandePayload, CreateMedicamentPayload, Medicament, UpdateMedicamentPayload } from '@/core'
 
@@ -237,19 +238,13 @@ export const ProduitsPage = () => {
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-500">
-                {filteredAndSorted.length} produit(s) · page {currentPage}/{totalPages}
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
-                  Précédent
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
-                  Suivant
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filteredAndSorted.length}
+              itemLabel="produit"
+            />
           </>
         )}
       </GlassCard>

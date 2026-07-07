@@ -8,7 +8,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import type { Commande, Medicament, RoleDefinition, TicketFile, User } from '../types'
+import type { Commande, Medicament, User } from '../types'
 
 // ─── Utilisateur courant (session simulée) ───────────────────────────────────
 
@@ -134,76 +134,6 @@ export const medicaments: Medicament[] = [
   },
 ]
 
-// ─── Rôles (système + dynamiques) ────────────────────────────────────────────
-
-export const roles: RoleDefinition[] = [
-  {
-    id: 'role-admin',
-    code: 'ADMIN',
-    label: 'Administrateur',
-    description: 'Accès complet à la plateforme',
-    permissions: ['dashboard:view', 'produits:read', 'produits:write', 'commandes:read', 'users:manage', 'roles:manage', 'file:view', 'file:manage'],
-    isSystem: true,
-    createdAt: '2026-01-01T08:00:00.000Z',
-    updatedAt: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'role-pharma',
-    code: 'PHARMACIEN',
-    label: 'Pharmacien',
-    description: 'Validation des commandes et gestion de la file',
-    permissions: ['dashboard:view', 'produits:read', 'commandes:read', 'commandes:valider', 'file:view', 'file:manage'],
-    isSystem: true,
-    createdAt: '2026-01-01T08:00:00.000Z',
-    updatedAt: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'role-caissier',
-    code: 'CAISSIER',
-    label: 'Caissier',
-    description: 'Gestion de la file d\'attente',
-    permissions: ['dashboard:view', 'produits:read', 'file:view', 'file:manage'],
-    isSystem: true,
-    createdAt: '2026-01-01T08:00:00.000Z',
-    updatedAt: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'role-client',
-    code: 'CLIENT',
-    label: 'Client',
-    description: 'Espace client en ligne',
-    permissions: ['dashboard:view', 'produits:read', 'commandes:read'],
-    isSystem: true,
-    createdAt: '2026-01-01T08:00:00.000Z',
-    updatedAt: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'role-reception',
-    code: 'RECEPTIONNISTE',
-    label: 'Réceptionniste',
-    description: 'Accueil et orientation des clients',
-    permissions: ['dashboard:view', 'file:view', 'file:manage', 'commandes:read'],
-    isSystem: false,
-    createdAt: '2026-06-01T08:00:00.000Z',
-    updatedAt: '2026-06-01T08:00:00.000Z',
-  },
-]
-
-// ─── File d'attente (tickets liés aux commandes validées) ────────────────────
-
-export const fileTickets: TicketFile[] = [
-  {
-    id: 'ticket-001',
-    numero: 1,
-    commandeId: 'cmd-002',
-    clientId: 'c-002',
-    clientNom: 'Suzanne Mobutu',
-    statut: 'EN_ATTENTE',
-    typeService: 'PHARMACIE',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
-  },
-]
-
 // ─── Commandes ───────────────────────────────────────────────────────────────
 
 export const commandes: Commande[] = [
@@ -225,10 +155,10 @@ export const commandes: Commande[] = [
     clientId: 'c-002',
     statut: 'PRETE',
     note: null,
-    codeRetrait: 'CMD-002',
-    payloadQr: 'PHARMACIE-COMMANDE:cmd-002',
-    montantTotal: '3500',
-    preteAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
+    codeRetrait: 'CMD-7F3A-2B9D',
+    payloadQr: 'PHARMACIE-COMMANDE:CMD-7F3A-2B9D',
+    qrImage: null,
+    montantTotal: '8000.00',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
     client: { id: clients[1].id, nom: clients[1].nom, prenom: clients[1].prenom, email: clients[1].email },

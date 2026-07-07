@@ -10,7 +10,11 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CreateCommandePayload, RefuserCommandePayload } from '@/core'
+import type {
+  CommandeCodePayload,
+  CreateCommandePayload,
+  RefuserCommandePayload,
+} from '@/core'
 import { useServices } from '../ServicesContext'
 import { useAuth } from './useAuth'
 
@@ -44,21 +48,39 @@ export const useCommandes = () => {
     onSuccess: invalidate,
   })
 
+  const marquerPrete = useMutation({
+    mutationFn: (id: string) => commandes.marquerPrete(id),
+    onSuccess: invalidate,
+  })
+
+  /** CLIENT — annuler une commande EN_ATTENTE */
   const annuler = useMutation({
     mutationFn: (id: string) => commandes.annuler(id),
     onSuccess: invalidate,
   })
 
-  const consulterParCode = useMutation({
-    mutationFn: (code: string) => commandes.consulterParCode(code),
+  /** PHARMACIEN / CAISSIER — consulter une commande via son code QR */
+  const consulterCode = useMutation({
+    mutationFn: (payload: CommandeCodePayload) => commandes.consulterCode(payload),
   })
 
-  const retirerParCode = useMutation({
-    mutationFn: (code: string) => commandes.retirerParCode(code),
+  /** PHARMACIEN — confirmer le retrait via QR (→ RETIREE) */
+  const retirerCode = useMutation({
+    mutationFn: (payload: CommandeCodePayload) => commandes.retirerCode(payload),
     onSuccess: invalidate,
   })
 
-  return { list, create, valider, refuser, annuler, consulterParCode, retirerParCode, isClientUser }
+  return {
+    list,
+    create,
+    valider,
+    refuser,
+    marquerPrete,
+    annuler,
+    consulterCode,
+    retirerCode,
+    isClientUser,
+  }
 }
 
 export const useCommande = (id: string | undefined) => {

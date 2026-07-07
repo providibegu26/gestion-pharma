@@ -10,20 +10,20 @@ interface TopbarProps {
 }
 
 const defaultTitles: Record<string, string> = {
-  '/admin':                     'Centre de contrôle',
-  '/professionnel':             'Espace professionnel',
-  '/professionnel/dashboard':   'Tableau de bord',
-  '/professionnel/produits':    'Produits',
-  '/professionnel/utilisateurs':'Personnel',
-  '/professionnel/commandes':   'Commandes clients',
-  '/professionnel/file-attente':'File d\'attente',
-  '/professionnel/roles':       'Gestion des rôles',
-  '/admin/utilisateurs':        'Personnel',
-  '/admin/commandes':           'Commandes clients',
-  '/client':                    'Mon espace',
-  '/client/dashboard':          'Tableau de bord',
-  '/client/produits':           'Produits',
-  '/client/commandes':          'Mes commandes',
+  '/admin':                          'Centre de contrôle',
+  '/professionnel':                  'Espace professionnel',
+  '/professionnel/tableau-de-bord':  'Tableau de bord',
+  '/professionnel/produits':         'Produits',
+  '/professionnel/utilisateurs':     'Personnel',
+  '/professionnel/roles':            'Gestion des rôles',
+  '/professionnel/commandes':        'Commandes clients',
+  '/professionnel/file-attente':     "File d'attente",
+  '/admin/utilisateurs':             'Personnel',
+  '/admin/commandes':                'Commandes clients',
+  '/client':                         'Mon espace',
+  '/client/tableau-de-bord':         'Tableau de bord',
+  '/client/produits':                'Produits',
+  '/client/commandes':               'Mes commandes',
 }
 
 export const Topbar = ({ onMenuToggle, titles, notificationsPath }: TopbarProps) => {
