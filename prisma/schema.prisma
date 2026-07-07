@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  nom             String
+  prenom          String
+  email           String         @unique
+  motDePasse      String
+  role            Role           @default(CLIENT)
+  refreshToken    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  ventes          Vente[]
+  commandes       Commande[]     @relation("CommandeClient")
+  commandesRefusees Commande[]   @relation("CommandeRefusePar")
+  commandesRetirees Commande[]   @relation("CommandeRetirePar")
+  codesQrVerifies CodeQr[]       @relation("CodeQrVerifiePar")
+  ticketsFile     FileAttente[]  @relation("FileAttenteClient")
+  ticketsAppeles  FileAttente[]  @relation("FileAttenteAppelePar")
+}
+
+model Patient {
+  id          String       @id @default(uuid())
+  nom         String
+  prenom      String
+  telephone   String       @unique
+  adresse     String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ordonnances Ordonnance[]
+  ventes      Vente[]
+  codesQr     CodeQr[]
+}
+
+model Medicament {
+  id             String          @id @default(uuid())
+  nom            String
+  description    String?
+  prixCDF        Decimal         @db.Decimal(10, 2)
+  prixUSD        Decimal         @db.Decimal(10, 2)
+  categorie      String
+  unite          String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  stock          Stock?
+  lignesVente    LigneVente[]
+  lignesCommande LigneCommande[]
+  codesQr        CodeQr[]
+}
+
+model Stock {
+  id           String     @id @default(uuid())
+  medicamentId String     @unique
+  quantite     Int        @default(0)
+  seuilMinimum Int        @default(10)
+  updatedAt    DateTime   @updatedAt
+  medicament   Medicament @relation(fields: [medicamentId], references: [id])
+}
+
+model Ordonnance {
+  id           String           @id @default(uuid())
+  patientId    String
+  prescripteur String
+  statut       StatutOrdonnance @default(EN_ATTENTE)
+  imageUrl     String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  patient      Patient          @relation(fields: [patientId], references: [id])
+  vente        Vente?
+}
+
+model Vente {
+  id           String       @id @default(uuid())
+  patientId    String?
+  userId       String
+  ordonnanceId String?      @unique
+  montantTotal Decimal      @db.Decimal(10, 2)
+  devise       Devise       @default(CDF)
+  statut       StatutVente  @default(EN_COURS)
+  qrCode       String?
+  ticketUrl    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  patient      Patient?     @relation(fields: [patientId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  ordonnance   Ordonnance?  @relation(fields: [ordonnanceId], references: [id])
+  lignes       LigneVente[]
+  codesQr      CodeQr[]
+}
+
+model LigneVente {
+  id           String     @id @default(uuid())
+  venteId      String
+  medicamentId String
+  quantite     Int
+  prixUnitaire Decimal    @db.Decimal(10, 2)
+  devise       Devise     @default(CDF)
+  vente        Vente      @relation(fields: [venteId], references: [id])
+  medicament   Medicament @relation(fields: [medicamentId], references: [id])
+  codesQr      CodeQr[]
+}
+
+/// Code QR unique par unité vendue — lié à 1 vente, 1 produit, 1 patient (optionnel)
+model CodeQr {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  venteId      String
+  ligneVenteId String
+  medicamentId String
+  patientId    String?
+  statut       StatutCodeQr  @default(ACTIF)
+  qrImage      String?
+  utiliseAt    DateTime?
+  verifieParId String?
+  createdAt    DateTime      @default(now())
+  vente        Vente         @relation(fields: [venteId], references: [id], onDelete: Cascade)
+  ligneVente   LigneVente    @relation(fields: [ligneVenteId], references: [id], onDelete: Cascade)
+  medicament   Medicament    @relation(fields: [medicamentId], references: [id])
+  patient      Patient?      @relation(fields: [patientId], references: [id])
+  verifiePar   User?         @relation("CodeQrVerifiePar", fields: [verifieParId], references: [id])
+}
+
+model Fournisseur {
+  id        String   @id @default(uuid())
+  nom       String
+  telephone String   @unique
+  email     String?  @unique
+  adresse   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Commande client en ligne — 1 seul code QR pour toute la commande (retrait en pharmacie)
+model Commande {
+  id                String          @id @default(uuid())
+  clientId          String
+  statut            StatutCommande  @default(EN_ATTENTE)
+  note              String?
+  motifRefus        String?
+  refuseAutomatique Boolean         @default(false)
+  refuseParId       String?
+  refuseAt          DateTime?
+  codeRetrait       String?         @unique
+  qrImage           String?
+  montantTotal      Decimal?        @db.Decimal(10, 2)
+  retraitAt         DateTime?
+  retireParId       String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  client            User            @relation("CommandeClient", fields: [clientId], references: [id])
+  refusePar         User?           @relation("CommandeRefusePar", fields: [refuseParId], references: [id])
+  retirePar         User?           @relation("CommandeRetirePar", fields: [retireParId], references: [id])
+  lignes            LigneCommande[]
+}
+
+model LigneCommande {
+  id           String     @id @default(uuid())
+  commandeId   String
+  medicamentId String
+  quantite     Int
+  commande     Commande   @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  medicament   Medicament @relation(fields: [medicamentId], references: [id])
+}
+
+/// File d'attente automatique — pharmacie ou caisse
+model FileAttente {
+  id             String          @id @default(uuid())
+  numeroTicket   Int
+  clientId       String?
+  nomAffiche     String?
+  typeService    TypeServiceFile
+  statut         StatutFile      @default(EN_ATTENTE)
+  position       Int
+  estimeeMinutes Int?
+  appeleParId    String?
+  appeleAt       DateTime?
+  termineAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  client         User?           @relation("FileAttenteClient", fields: [clientId], references: [id])
+  appelePar      User?           @relation("FileAttenteAppelePar", fields: [appeleParId], references: [id])
+
+  @@index([typeService, statut, createdAt])
+  @@index([clientId, statut])
+}
+
+enum Role {
+  ADMIN
+  PHARMACIEN
+  CAISSIER
+  CLIENT
+}
+
+enum StatutCommande {
+  EN_ATTENTE
+  VALIDEE
+  PRETE
+  RETIREE
+  REFUSEE
+}
+
+enum StatutOrdonnance {
+  EN_ATTENTE
+  VALIDEE
+  REFUSEE
+}
+
+enum StatutVente {
+  EN_COURS
+  FINALISEE
+  ANNULEE
+}
+
+enum Devise {
+  CDF
+  USD
+}
+
+enum StatutCodeQr {
+  ACTIF
+  UTILISE
+  ANNULE
+}
+
+enum TypeServiceFile {
+  PHARMACIE
+  CAISSE
+}
+
+enum StatutFile {
+  EN_ATTENTE
+  APPELE
+  EN_COURS
+  TERMINE
+  ANNULE
+}

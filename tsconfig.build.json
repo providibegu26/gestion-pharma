@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "src/patients/**",
+    "src/medicaments/**",
+    "src/stock/**",
+    "src/ordonnances/**",
+    "src/ventes/**",
+    "src/fournisseurs/**",
+    "src/commandes/**"
+  ]
+}

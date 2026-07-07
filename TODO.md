@@ -1,0 +1,3 @@
+- [x] Fix Prisma seed configuration (add migrations.seed entry to prisma.config.ts)
+- [ ] Retry `npx prisma db seed` (completed if seed runs without error)
+- [ ] If needed, align Prisma CLI version expectations (prisma.config.ts vs prisma section in package.json)

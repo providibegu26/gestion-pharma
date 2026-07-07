@@ -1,0 +1,16 @@
+node_modules
+dist
+
+# Secrets — ne jamais committer
+.env
+
+# Prisma généré
+/generated/prisma
+
+# IDE / outils locaux
+.claude
+*.log
+
+# Build / cache
+coverage
+.nyc_output
