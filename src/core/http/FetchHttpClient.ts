@@ -26,7 +26,12 @@ type PendingRequest = {
   reject: (err: unknown) => void
 }
 
-const AUTH_ROUTES = ['/auth/refresh', '/auth/login', '/auth/logout']
+// Routes exemptées du flux refresh/redirection sur 401 :
+//  - /auth/me    : sonde de session au démarrage. Un 401 signifie simplement
+//                  « non connecté » — géré par AuthStore.init(), PAS de refresh
+//                  ni de redirection (sinon boucle de rechargement au boot).
+//  - refresh/login/logout : évident (pas de refresh récursif).
+const AUTH_ROUTES = ['/auth/refresh', '/auth/login', '/auth/logout', '/auth/me']
 
 export class FetchHttpClient implements HttpClient {
   private readonly baseURL: string

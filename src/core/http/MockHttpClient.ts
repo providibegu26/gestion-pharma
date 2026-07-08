@@ -23,8 +23,6 @@ import { registerAuthMocks } from '../mocks/auth.mocks'
 import { registerCommandesMocks } from '../mocks/commandes.mocks'
 import { registerMedicamentsMocks } from '../mocks/medicaments.mocks'
 import { registerStockMocks } from '../mocks/stock.mocks'
-import { registerRolesMocks } from '../mocks/roles.mocks'
-import { registerFileAttenteMocks } from '../mocks/fileAttente.mocks'
 import { registerUsersMocks } from '../mocks/users.mocks'
 import type { MockHandler, MockMethod } from '../mocks/types'
 
@@ -42,8 +40,6 @@ export class MockHttpClient implements HttpClient {
     registerCommandesMocks(this.register)
     registerMedicamentsMocks(this.register)
     registerStockMocks(this.register)
-    registerRolesMocks(this.register)
-    registerFileAttenteMocks(this.register)
   }
 
   // ─── API publique HttpClient ───────────────────────────────────────────────

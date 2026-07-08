@@ -96,7 +96,9 @@ export class AxiosHttpClient implements HttpClient {
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined
 
-    const isAuthRoute = !!originalRequest?.url && ['/auth/refresh', '/auth/login', '/auth/logout']
+    // /auth/me exempté : un 401 = « non connecté », géré par AuthStore.init()
+    // sans refresh ni redirection (évite la boucle de rechargement au démarrage).
+    const isAuthRoute = !!originalRequest?.url && ['/auth/refresh', '/auth/login', '/auth/logout', '/auth/me']
       .some((p) => originalRequest.url!.includes(p))
 
     // Tentative de refresh automatique sur 401

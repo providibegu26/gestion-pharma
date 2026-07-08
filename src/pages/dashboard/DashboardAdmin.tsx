@@ -11,6 +11,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { formatDate } from '@/utils/helpers'
+import { DEMO_HIDE_ROLE_UI } from '@/utils/demo'
 
 const ROLE_COLORS: Record<string, string> = {
   PHARMACIEN: 'bg-teal-100 text-teal-800 border-teal-200',
@@ -176,11 +177,13 @@ export const DashboardAdmin = () => {
               Gérer le personnel
             </Button>
           </Link>
-          <Link to="/professionnel/roles">
-            <Button variant="outline" size="sm" icon={<Shield size={14} />} iconRight={<ArrowRight size={13} />}>
-              Gérer les rôles
-            </Button>
-          </Link>
+          {!DEMO_HIDE_ROLE_UI && (
+            <Link to="/professionnel/roles">
+              <Button variant="outline" size="sm" icon={<Shield size={14} />} iconRight={<ArrowRight size={13} />}>
+                Gérer les rôles
+              </Button>
+            </Link>
+          )}
         </div>
       </GlassCard>
     </div>

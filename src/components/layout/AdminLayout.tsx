@@ -3,6 +3,7 @@ import { useAuth } from '@/adapters/react'
 import { getRoleDefinition, navForRole, type NavIconKey, type RoleColor } from '@/core'
 import { RoleAppLayout } from './RoleAppLayout'
 import { RealtimeBridge } from '@/components/realtime/RealtimeBridge'
+import { DEMO_HIDE_ROLE_UI } from '@/utils/demo'
 import type { NavItemDef } from './RoleSidebar'
 
 const ICON = 18
@@ -33,7 +34,9 @@ export const AdminLayout = () => {
   const { user } = useAuth()
   const def = user ? getRoleDefinition(user.role) : null
 
-  const navItems: NavItemDef[] = navForRole(user?.role).map((item) => ({
+  const navItems: NavItemDef[] = navForRole(user?.role)
+    .filter((item) => !DEMO_HIDE_ROLE_UI || !item.to.includes('/roles'))
+    .map((item) => ({
     to: item.to,
     label: item.label,
     section: item.section,

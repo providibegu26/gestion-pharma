@@ -32,7 +32,7 @@ export interface ApiResponse<T> {
 export interface ApiErrorPayload {
   success: false
   statusCode: number
-  message: string
+  message: string | string[]
   timestamp: string
   path: string
 }

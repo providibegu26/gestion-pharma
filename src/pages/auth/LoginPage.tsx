@@ -1,18 +1,48 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, Pill, ArrowRight, ShieldCheck, Sparkles, Activity } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Pill, ArrowRight, ShieldCheck, Sparkles, Activity, Zap, ChevronDown, ChevronUp } from 'lucide-react'
 import { useAuth, useApiError } from '@/adapters/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { toast } from '@/components/ui/Toast'
+import type { User } from '@/core'
+
+// ─── Comptes de test rapide (mode démo / développement local) ────────────────
+const DEMO_USERS: { label: string; color: string; user: User }[] = [
+  {
+    label: 'Admin',
+    color: 'bg-violet-100 text-violet-800 border-violet-200 hover:bg-violet-200',
+    user: {
+      id: 'demo-admin', nom: 'Demo', prenom: 'Admin', email: 'admin@pharma.cd',
+      role: 'ADMIN', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    },
+  },
+  {
+    label: 'Pharmacien',
+    color: 'bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200',
+    user: {
+      id: 'demo-pharma', nom: 'Demo', prenom: 'Pharmacien', email: 'pharma@pharma.cd',
+      role: 'PHARMACIEN', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    },
+  },
+  {
+    label: 'Caissier',
+    color: 'bg-sand-100 text-sand-800 border-sand-200 hover:bg-amber-100',
+    user: {
+      id: 'demo-caissier', nom: 'Demo', prenom: 'Caissier', email: 'caissier@pharma.cd',
+      role: 'CAISSIER', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    },
+  },
+]
 
 const imgPharmacist = '/images/african-american-pharmacist-working-drugstore-hospital-pharmacy-african-healthcare-stethoscope-black-woman-doctor.jpg'
 
 export const LoginPage = () => {
   const navigate = useNavigate()
-  const { login, homeForRole, signOut } = useAuth()
+  const { login, loginAs, homeForRole, signOut } = useAuth()
   const { getErrorMessage } = useApiError()
+  const [showDemo, setShowDemo] = useState(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -180,7 +210,43 @@ export const LoginPage = () => {
               <div className="flex-1 h-px bg-slate-200" />
             </div>
 
-            <p className="mt-6 text-center text-sm text-slate-600 font-body">
+            {/* Accès rapide multi-rôle (tests locaux) */}
+            <div className="mt-4 rounded-xl border border-dashed border-slate-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowDemo((v) => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-50 transition-colors"
+              >
+                <span className="flex items-center gap-2 font-medical text-2xs font-semibold text-slate-500 uppercase tracking-widest">
+                  <Zap size={11} /> Accès rapide (tests)
+                </span>
+                {showDemo ? <ChevronUp size={13} className="text-slate-400" /> : <ChevronDown size={13} className="text-slate-400" />}
+              </button>
+              {showDemo && (
+                <div className="px-4 pb-4 pt-1 space-y-2">
+                  <p className="font-body text-2xs text-slate-400">
+                    Ouvre chaque rôle dans un onglet séparé — sessions indépendantes.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {DEMO_USERS.map((d) => (
+                      <button
+                        key={d.user.id}
+                        type="button"
+                        onClick={() => { loginAs(d.user); navigate(homeForRole()) }}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold font-body transition-colors ${d.color}`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="font-body text-2xs text-amber-600">
+                    ⚠ Mode démo uniquement — les appels API utilisent vos vraies credentials backend.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="mt-4 text-center text-sm text-slate-600 font-body">
               Vous êtes un client ?{' '}
               <Link to="/connexion" className="text-teal-700 hover:text-teal-800 font-semibold transition-colors">
                 Espace client

@@ -96,7 +96,6 @@ const readEnvWsURL = (): string => {
 export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
   // ─── 1. HTTP — câblage différé du refresh (auth service pas encore créé) ───
   let authServiceRef: AuthService | null = null
-  let authStoreRef: AuthStore | null = null
 
   const http = createHttpClient({
     baseURL: opts.baseURL ?? readEnvBaseURL(),
@@ -112,7 +111,12 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
       }
     },
     onAuthFailure: () => {
-      authStoreRef?.clear()
+      // Politique volontairement PERMISSIVE : on ne déconnecte PAS l'utilisateur
+      // quand un refresh échoue. La requête concernée échoue (l'UI affiche son
+      // erreur localement), mais la session reste active — l'utilisateur n'est
+      // éjecté que par une déconnexion explicite (bouton logout).
+      // Cela évite qu'un backend lent/instable (tunnel) ou une route 401
+      // ponctuelle ne fasse « sauter » la session admin en pleine navigation.
       opts.onAuthFailure?.()
     },
   })
@@ -135,7 +139,6 @@ export const createCore = (opts: BootstrapOptions = {}): CoreContainer => {
 
   // ─── 3. Stores ──────────────────────────────────────────────────────────────
   const authStore = new AuthStore(auth)
-  authStoreRef = authStore
   const queueStore = new QueueStore()
 
   return {

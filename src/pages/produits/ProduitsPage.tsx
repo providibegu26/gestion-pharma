@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pill, Search, Package2, ArrowUpDown, ShoppingCart, Plus, Edit2, Trash2, PackagePlus, AlertTriangle } from 'lucide-react'
-import { useAuth, useApiError, useMedicaments, useServices } from '@/adapters/react'
+import { useAuth, useApiError, useMedicaments, usePermissions, useServices } from '@/adapters/react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -26,7 +26,8 @@ export const ProduitsPage = () => {
   const qc = useQueryClient()
   const { list } = useMedicaments()
   const { commandes, medicaments, stock: stockService } = useServices()
-  const { isClient, isAdmin } = useAuth()
+  const { isClient } = useAuth()
+  const { can } = usePermissions()
   const { getErrorMessage } = useApiError()
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortMode>('name-asc')
@@ -46,7 +47,8 @@ export const ProduitsPage = () => {
   const [stockForm, setStockForm] = useState({ quantite: 0, seuilMinimum: 10 })
   const [stockAlertShown, setStockAlertShown] = useState(false)
   const isClientUser = isClient()
-  const isAdminUser = isAdmin()
+  // Gestion catalogue/stock : permission `produits.manage` (PHARMACIEN).
+  const canManage = can('produits.manage')
 
   const createCommandeMut = useMutation({
     mutationFn: (payload: CreateCommandePayload) => commandes.create(payload),
@@ -92,11 +94,11 @@ export const ProduitsPage = () => {
   })
 
   useEffect(() => {
-    if (isAdminUser && alertes.length > 0 && !stockAlertShown) {
+    if (canManage && alertes.length > 0 && !stockAlertShown) {
       setModal('alertes')
       setStockAlertShown(true)
     }
-  }, [alertes.length, isAdminUser, stockAlertShown])
+  }, [alertes.length, canManage, stockAlertShown])
 
   const filteredAndSorted = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -170,7 +172,7 @@ export const ProduitsPage = () => {
         title="Catalogue produits"
         subtitle="Consultation optimisée des médicaments disponibles en base de données"
         icon={<Pill size={20} />}
-        actions={isAdminUser && (
+        actions={canManage && (
           <Button icon={<Plus size={15} />} onClick={openCreate}>
             Ajouter un médicament
           </Button>
@@ -226,7 +228,7 @@ export const ProduitsPage = () => {
                   key={m.id}
                   item={m}
                   isClient={isClientUser}
-                  isAdmin={isAdminUser}
+                  canManage={canManage}
                   isOrdering={createCommandeMut.isPending && createCommandeMut.variables?.lignes?.[0]?.medicamentId === m.id}
                   onCommander={() => createCommandeMut.mutate({
                     lignes: [{ medicamentId: m.id, quantite: 1 }],
@@ -320,7 +322,7 @@ export const ProduitsPage = () => {
 interface ProduitCardProps {
   item: Medicament
   isClient: boolean
-  isAdmin: boolean
+  canManage: boolean
   isOrdering: boolean
   onCommander: () => void
   onEdit: () => void
@@ -328,7 +330,7 @@ interface ProduitCardProps {
   onDelete: () => void
 }
 
-const ProduitCard = ({ item, isClient, isAdmin, isOrdering, onCommander, onEdit, onStock, onDelete }: ProduitCardProps) => {
+const ProduitCard = ({ item, isClient, canManage, isOrdering, onCommander, onEdit, onStock, onDelete }: ProduitCardProps) => {
   const stock = item.stock?.quantite
   const seuil = item.stock?.seuilMinimum
   const low = stock !== undefined && seuil !== undefined && stock <= seuil
@@ -371,7 +373,7 @@ const ProduitCard = ({ item, isClient, isAdmin, isOrdering, onCommander, onEdit,
           {outOfStock ? 'Indisponible' : 'Commander'}
         </Button>
       )}
-      {isAdmin && (
+      {canManage && (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={onStock} icon={<PackagePlus size={13} />}>Stock</Button>
           <Button variant="ghost" size="sm" onClick={onEdit} icon={<Edit2 size={13} />}>Modifier</Button>

@@ -26,6 +26,7 @@ export const useAuth = () => {
     // actions
     initAuth: authStore.init,
     login: authStore.login,
+    loginAs: authStore.loginAs,
     register: authStore.register,
     changePassword: authStore.changePassword,
     signOut: authStore.signOut,

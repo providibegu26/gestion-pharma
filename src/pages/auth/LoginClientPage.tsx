@@ -1,15 +1,21 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Heart, ShieldCheck, ShoppingBag } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Heart, ShieldCheck, ShoppingBag, Zap } from 'lucide-react'
 import { useAuth, useApiError } from '@/adapters/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { toast } from '@/components/ui/Toast'
+import type { User } from '@/core'
+
+const DEMO_CLIENT: User = {
+  id: 'demo-client', nom: 'Demo', prenom: 'Client', email: 'client@pharma.cd',
+  role: 'CLIENT', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+}
 
 export const LoginClientPage = () => {
   const navigate = useNavigate()
-  const { login, homeForRole, signOut } = useAuth()
+  const { login, loginAs, homeForRole, signOut } = useAuth()
   const { getErrorMessage } = useApiError()
 
   const [email, setEmail] = useState('')
@@ -108,7 +114,16 @@ export const LoginClientPage = () => {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-600 font-body">
+          {/* Accès rapide test */}
+          <button
+            type="button"
+            onClick={() => { loginAs(DEMO_CLIENT); navigate(homeForRole()) }}
+            className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-200 py-2.5 text-xs font-semibold text-slate-500 hover:border-teal-300 hover:text-teal-700 transition-colors"
+          >
+            <Zap size={12} /> Accès rapide — Demo Client (test local)
+          </button>
+
+          <p className="mt-4 text-center text-sm text-slate-600 font-body">
             Nouveau client ?{' '}
             <Link to="/inscription" className="text-teal-700 hover:text-teal-800 font-semibold transition-colors">
               Créer un compte

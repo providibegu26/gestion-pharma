@@ -69,41 +69,41 @@ export const AppRouter = () => (
       </Route>
 
       {/* ─────────────────────────────────────────────────────────────────────
-          Espace ADMIN — gestion du personnel uniquement
-          Backend → 403 sur toute route hors /users & /roles
+          Espace PROFESSIONNEL — un seul groupe de routes partagé.
+          IMPORTANT : chaque chemin ne doit être déclaré QU'UNE fois.
+          (Déclarer le même path dans plusieurs groupes gardés par rôle
+          provoque une boucle de redirection infinie → page blanche.)
+          Le contrôle fin par rôle se fait via des gardes imbriqués par page.
          ───────────────────────────────────────────────────────────────────── */}
-      <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+      <Route element={<ProtectedRoute roles={['ADMIN', 'PHARMACIEN', 'CAISSIER']} />}>
         <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<Navigate to="/professionnel/tableau-de-bord" replace />} />
-          <Route path="/professionnel/tableau-de-bord" element={<DashboardPage />} />
-          <Route path="/professionnel/utilisateurs"    element={<UtilisateursPage />} />
-          <Route path="/professionnel/roles"           element={<RolesPage />} />
-        </Route>
-      </Route>
+          <Route path="/admin"          element={<Navigate to="/professionnel/tableau-de-bord" replace />} />
+          <Route path="/professionnel"  element={<Navigate to="/professionnel/tableau-de-bord" replace />} />
 
-      {/* ─────────────────────────────────────────────────────────────────────
-          Espace PHARMACIEN — médicaments, commandes, file pharmacie
-         ───────────────────────────────────────────────────────────────────── */}
-      <Route element={<ProtectedRoute roles={['PHARMACIEN']} />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/professionnel" element={<Navigate to="/professionnel/tableau-de-bord" replace />} />
+          {/* Dashboard commun : le switcher interne affiche la vue du rôle */}
           <Route path="/professionnel/tableau-de-bord" element={<DashboardPage />} />
-          <Route path="/professionnel/produits"     element={<ProduitsPage />} />
-          <Route path="/professionnel/commandes"    element={<CommandesPage />} />
-          <Route path="/professionnel/file-attente" element={<FileAttentePage />} />
-        </Route>
-      </Route>
 
-      {/* ─────────────────────────────────────────────────────────────────────
-          Espace CAISSIER — ventes, CA, catalogue lecture, file caisse
-          Aucun accès aux commandes médicales ni à la gestion des comptes.
-         ───────────────────────────────────────────────────────────────────── */}
-      <Route element={<ProtectedRoute roles={['CAISSIER']} />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/professionnel/tableau-de-bord" element={<DashboardPage />} />
-          <Route path="/professionnel/ventes"          element={<VentesPage />} />
-          <Route path="/professionnel/produits"        element={<ProduitsPage />} />
-          <Route path="/professionnel/file-attente"    element={<FileAttentePage />} />
+          {/* Admin uniquement : gestion des comptes */}
+          <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+            <Route path="/professionnel/utilisateurs" element={<UtilisateursPage />} />
+            <Route path="/professionnel/roles"        element={<RolesPage />} />
+          </Route>
+
+          {/* Pharmacien uniquement : commandes médicales */}
+          <Route element={<ProtectedRoute roles={['PHARMACIEN']} />}>
+            <Route path="/professionnel/commandes" element={<CommandesPage />} />
+          </Route>
+
+          {/* Caissier uniquement : ventes & chiffre d'affaires */}
+          <Route element={<ProtectedRoute roles={['CAISSIER']} />}>
+            <Route path="/professionnel/ventes" element={<VentesPage />} />
+          </Route>
+
+          {/* Pharmacien + Caissier : catalogue et file d'attente */}
+          <Route element={<ProtectedRoute roles={['PHARMACIEN', 'CAISSIER']} />}>
+            <Route path="/professionnel/produits"     element={<ProduitsPage />} />
+            <Route path="/professionnel/file-attente" element={<FileAttentePage />} />
+          </Route>
         </Route>
       </Route>
 

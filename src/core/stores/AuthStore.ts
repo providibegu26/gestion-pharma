@@ -3,12 +3,10 @@
  *  AuthStore — État d'authentification global (framework-agnostic)
  * ─────────────────────────────────────────────────────────────────────────────
  *  - Étend Observable<AuthState>
- *  - Persiste l'utilisateur dans `localStorage` (clé STORAGE_KEY)
+ *  - Persiste l'utilisateur dans `sessionStorage` (1 session = 1 onglet)
+ *    → Permet d'ouvrir plusieurs onglets avec des rôles différents en local.
  *  - Expose une API métier : init/login/register/logout/changePassword
  *  - Délègue les appels HTTP à `AuthService` (injecté)
- *
- *  Pas de hook, pas de décorateur Angular, pas de composition Vue.
- *  Les adaptateurs (react/angular/vue) viennent S'ABONNER à `subscribe()`.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -36,7 +34,7 @@ const INITIAL: AuthState = {
   isLoading: false,
 }
 
-// ─── Persistance localStorage ───────────────────────────────────────────────
+// ─── Persistance sessionStorage (indépendante par onglet) ────────────────────
 
 const safeWindow = (): Window | null =>
   typeof window === 'undefined' ? null : window
@@ -45,7 +43,7 @@ const loadFromStorage = (): Partial<AuthState> => {
   const w = safeWindow()
   if (!w) return {}
   try {
-    const raw = w.localStorage.getItem(STORAGE_KEY)
+    const raw = w.sessionStorage.getItem(STORAGE_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw) as Partial<AuthState>
     return {
@@ -61,12 +59,19 @@ const persist = (state: AuthState) => {
   const w = safeWindow()
   if (!w) return
   try {
-    w.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ user: state.user, isAuthenticated: state.isAuthenticated }),
-    )
+    if (state.user) {
+      w.sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      )
+    } else {
+      w.sessionStorage.removeItem(STORAGE_KEY)
+    }
   } catch { /* quota dépassé / mode privé : silencieux */ }
 }
+
+// ─── Garde contre les initialisations parallèles ─────────────────────────────
+let _initInProgress = false
 
 // ─── Store ──────────────────────────────────────────────────────────────────
 
@@ -86,7 +91,7 @@ export class AuthStore extends Observable<AuthState> {
   isAdmin       = (): boolean => this.hasRole('ADMIN')
   isPharmacien  = (): boolean => this.hasRole('PHARMACIEN')
   isPreparateur = (): boolean => false
-  isCaissier    = (): boolean => this.hasRole('ADMIN', 'CAISSIER')
+  isCaissier    = (): boolean => this.hasRole('CAISSIER')
   isClient      = (): boolean => this.hasRole('CLIENT')
   isStaff       = (): boolean => this.hasRole('ADMIN', 'PHARMACIEN', 'CAISSIER')
   isProfessionnel = (): boolean => !this.isClient() && this.getUser() !== null
@@ -100,17 +105,39 @@ export class AuthStore extends Observable<AuthState> {
 
   // ─── Actions ─────────────────────────────────────────────────────────────
 
-  /** À appeler au démarrage de l'app pour récupérer le user via le cookie. */
+  /**
+   * Vérifie la session via `GET /auth/me` au démarrage de l'app.
+   * - Ne relance PAS si déjà en cours (protection anti double-appel HMR/StrictMode).
+   * - Si l'utilisateur est déjà en sessionStorage, on suppose qu'il est connecté
+   *   et on tente une validation silencieuse en arrière-plan sans bloquer l'UI.
+   */
   init = async (): Promise<void> => {
-    this.setState((s) => ({ ...s, isLoading: true }))
+    if (_initInProgress) return
+    _initInProgress = true
+
+    const hasStoredSession = !!this.getState().user
+
+    if (!hasStoredSession) {
+      // Pas de session locale → vérifier le cookie avec le backend
+      this.setState((s) => ({ ...s, isLoading: true }))
+    }
+
     try {
-      // Timeout court pour éviter de bloquer l'UI sur écran de chargement
-      // quand le backend est indisponible ou lent.
-      const user = await this.authService.me({ timeout: 5000 })
+      // Timeout généreux : le backend tunnel (Loophole) peut être lent au 1er hit.
+      const user = await this.authService.me({ timeout: 10000 })
       this.setUser(user)
     } catch {
-      // Pas de session valide — on reste déconnecté
-      this.setState((s) => ({ ...s, isLoading: false }))
+      if (!hasStoredSession) {
+        // Pas de session valide → déconnecté
+        this.setState({ user: null, isAuthenticated: false, isLoading: false })
+      } else {
+        // Session locale présente mais vérification impossible (backend lent,
+        // hors-ligne, 401 ponctuel) → on GARDE la session. L'utilisateur n'est
+        // déconnecté que par un logout explicite. Politique permissive assumée.
+        this.setState((s) => ({ ...s, isLoading: false }))
+      }
+    } finally {
+      _initInProgress = false
     }
   }
 
@@ -118,6 +145,14 @@ export class AuthStore extends Observable<AuthState> {
     const user = await this.authService.login({ email, motDePasse })
     this.setUser(user)
     return user
+  }
+
+  /**
+   * Connexion directe via objet User (mode test/démo).
+   * Utilisé par les boutons de connexion rapide sur la page login.
+   */
+  loginAs = (user: User): void => {
+    this.setUser(user)
   }
 
   register = async (payload: RegisterClientPayload): Promise<User> => {
