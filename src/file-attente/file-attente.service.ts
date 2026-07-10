@@ -87,16 +87,7 @@ export class FileAttenteService {
       include: FILE_INCLUDE,
     });
 
-    this.notifications.notifierFileAttente({
-      type: 'rejoint',
-      ticketId: ticket.id,
-      numeroTicket: ticket.numeroTicket,
-      typeService: ticket.typeService,
-      statut: ticket.statut,
-      position: ticket.position,
-      estimeeMinutes: ticket.estimeeMinutes ?? undefined,
-      nomAffiche: ticket.nomAffiche,
-    });
+    this.notifierTicket('rejoint', ticket);
 
     await this.emitStats();
 
@@ -177,39 +168,11 @@ export class FileAttenteService {
       );
     }
 
-    const suivant = await this.prisma.fileAttente.findFirst({
-      where: {
-        typeService,
-        statut: StatutFile.EN_ATTENTE,
-        createdAt: { gte: this.debutJournee() },
-      },
-      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
-    });
+    const appele = await this.appelerProchainTicket(typeService, staffId);
 
-    if (!suivant) {
+    if (!appele) {
       throw new NotFoundException('Aucune personne en attente dans cette file.');
     }
-
-    const appele = await this.prisma.fileAttente.update({
-      where: { id: suivant.id },
-      data: {
-        statut: StatutFile.APPELE,
-        appeleParId: staffId,
-        appeleAt: new Date(),
-      },
-      include: FILE_INCLUDE,
-    });
-
-    await this.recalculerPositions(typeService);
-
-    this.notifications.notifierFileAttente({
-      type: 'appele',
-      ticketId: appele.id,
-      numeroTicket: appele.numeroTicket,
-      typeService: appele.typeService,
-      statut: appele.statut,
-      nomAffiche: appele.nomAffiche,
-    });
 
     await this.emitStats();
 
@@ -263,14 +226,7 @@ export class FileAttenteService {
 
     await this.recalculerPositions(ticket.typeService);
 
-    this.notifications.notifierFileAttente({
-      type: 'termine',
-      ticketId: updated.id,
-      numeroTicket: updated.numeroTicket,
-      typeService: updated.typeService,
-      statut: updated.statut,
-      nomAffiche: updated.nomAffiche,
-    });
+    this.notifierTicket('termine', updated);
 
     await this.emitStats();
 
@@ -283,7 +239,7 @@ export class FileAttenteService {
 
     if (fileStats.enAttente > 0) {
       try {
-        await this.appelerSuivantAutomatique(ticket.typeService, staffId);
+        await this.appelerProchainTicket(ticket.typeService, staffId);
       } catch {
         // Pas de suivant ou staff occupé — ignoré
       }
@@ -320,21 +276,19 @@ export class FileAttenteService {
 
     await this.recalculerPositions(ticket.typeService);
 
-    this.notifications.notifierFileAttente({
-      type: 'annule',
-      ticketId: updated.id,
-      numeroTicket: updated.numeroTicket,
-      typeService: updated.typeService,
-      statut: updated.statut,
-      nomAffiche: updated.nomAffiche,
-    });
+    this.notifierTicket('annule', updated);
 
     await this.emitStats();
 
     return { data: updated, message: `Ticket n°${updated.numeroTicket} annulé.` };
   }
 
-  private async appelerSuivantAutomatique(
+  /**
+   * Appelle le prochain ticket EN_ATTENTE d'une file et le passe à APPELE.
+   * Utilisé à la fois par l'appel manuel (appelerSuivant) et l'appel
+   * automatique déclenché après qu'un ticket soit terminé.
+   */
+  private async appelerProchainTicket(
     typeService: TypeServiceFile,
     staffId: string,
   ) {
@@ -347,7 +301,7 @@ export class FileAttenteService {
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     });
 
-    if (!suivant) return;
+    if (!suivant) return null;
 
     const appele = await this.prisma.fileAttente.update({
       where: { id: suivant.id },
@@ -361,13 +315,34 @@ export class FileAttenteService {
 
     await this.recalculerPositions(typeService);
 
+    this.notifierTicket('appele', appele);
+
+    return appele;
+  }
+
+  private notifierTicket(
+    type: 'rejoint' | 'appele' | 'termine' | 'annule',
+    ticket: {
+      id: string;
+      numeroTicket: number;
+      typeService: TypeServiceFile;
+      statut: StatutFile;
+      nomAffiche: string | null;
+      position?: number;
+      estimeeMinutes?: number | null;
+    },
+  ) {
     this.notifications.notifierFileAttente({
-      type: 'appele',
-      ticketId: appele.id,
-      numeroTicket: appele.numeroTicket,
-      typeService: appele.typeService,
-      statut: appele.statut,
-      nomAffiche: appele.nomAffiche,
+      type,
+      ticketId: ticket.id,
+      numeroTicket: ticket.numeroTicket,
+      typeService: ticket.typeService,
+      statut: ticket.statut,
+      nomAffiche: ticket.nomAffiche,
+      ...(ticket.position !== undefined && { position: ticket.position }),
+      ...(ticket.estimeeMinutes !== undefined && {
+        estimeeMinutes: ticket.estimeeMinutes ?? undefined,
+      }),
     });
   }
 
@@ -382,16 +357,18 @@ export class FileAttenteService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
-    for (let i = 0; i < enAttente.length; i++) {
-      const position = i + 1;
-      await this.prisma.fileAttente.update({
-        where: { id: enAttente[i].id },
-        data: {
-          position,
-          estimeeMinutes: this.calculerEstimee(typeService, position),
-        },
-      });
-    }
+    await Promise.all(
+      enAttente.map((ticket, i) => {
+        const position = i + 1;
+        return this.prisma.fileAttente.update({
+          where: { id: ticket.id },
+          data: {
+            position,
+            estimeeMinutes: this.calculerEstimee(typeService, position),
+          },
+        });
+      }),
+    );
 
     this.notifications.notifierFileAttente({
       type: 'mise-a-jour',
