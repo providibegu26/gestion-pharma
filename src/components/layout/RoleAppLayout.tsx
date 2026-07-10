@@ -30,9 +30,34 @@ interface RoleAppLayoutProps {
   bottomItems?: NavItemDef[]
   brand?: { title: string; subtitle: string }
   promo?: { title: string; description: string } | null
-  accent?: 'teal' | 'cyan' | 'sand' | 'violet'
+  accent?: 'teal' | 'cyan' | 'sand' | 'violet' | 'emerald'
+  theme?: 'client' | 'pro' | 'default'
   notificationsPath?: string
   maxWidth?: string
+}
+
+const themeBlobs = {
+  client: (
+    <>
+      <div className="absolute -top-20 left-1/4 w-[640px] h-[420px] rounded-full bg-emerald-200/25 blur-[140px]" />
+      <div className="absolute bottom-0 right-1/4 w-[520px] h-[340px] rounded-full bg-teal-100/30 blur-[140px]" />
+      <div className="absolute top-1/3 right-0 w-[400px] h-[280px] rounded-full bg-emerald-100/20 blur-[120px]" />
+    </>
+  ),
+  pro: (
+    <>
+      <div className="absolute -top-20 left-1/4 w-[640px] h-[420px] rounded-full bg-teal-200/25 blur-[140px]" />
+      <div className="absolute bottom-0 right-1/4 w-[520px] h-[340px] rounded-full bg-cyan-100/25 blur-[140px]" />
+      <div className="absolute top-1/3 right-0 w-[400px] h-[280px] rounded-full bg-teal-100/30 blur-[120px]" />
+    </>
+  ),
+  default: (
+    <>
+      <div className="absolute -top-20 left-1/4 w-[640px] h-[420px] rounded-full bg-teal-200/20 blur-[140px]" />
+      <div className="absolute bottom-0 right-1/4 w-[520px] h-[340px] rounded-full bg-sand-200/30 blur-[140px]" />
+      <div className="absolute top-1/3 right-0 w-[400px] h-[280px] rounded-full bg-cyan-100/30 blur-[120px]" />
+    </>
+  ),
 }
 
 export const RoleAppLayout = ({
@@ -41,6 +66,7 @@ export const RoleAppLayout = ({
   brand,
   promo,
   accent = 'teal',
+  theme = 'default',
   notificationsPath,
   maxWidth = '1600px',
 }: RoleAppLayoutProps) => {
@@ -50,9 +76,7 @@ export const RoleAppLayout = ({
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg-base">
       <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
-        <div className="absolute -top-20 left-1/4 w-[640px] h-[420px] rounded-full bg-teal-200/20 blur-[140px]" />
-        <div className="absolute bottom-0 right-1/4 w-[520px] h-[340px] rounded-full bg-sand-200/30 blur-[140px]" />
-        <div className="absolute top-1/3 right-0 w-[400px] h-[280px] rounded-full bg-cyan-100/30 blur-[120px]" />
+        {themeBlobs[theme]}
       </div>
 
       <RoleSidebar

@@ -21,14 +21,15 @@ interface RoleSidebarProps {
   bottomItems?: NavItemDef[]
   brand?: { title: string; subtitle: string }
   promo?: { title: string; description: string } | null
-  accent?: 'teal' | 'cyan' | 'sand' | 'violet'
+  accent?: 'teal' | 'cyan' | 'sand' | 'violet' | 'emerald'
 }
 
 const accentGradients = {
-  teal:   'from-teal-500 to-teal-700',
-  cyan:   'from-cyan-500 to-cyan-700',
-  sand:   'from-sand-500 to-sand-700',
-  violet: 'from-violet-500 to-violet-700',
+  teal:    'from-teal-500 to-teal-700',
+  cyan:    'from-cyan-500 to-cyan-700',
+  sand:    'from-sand-500 to-sand-700',
+  violet:  'from-violet-500 to-violet-700',
+  emerald: 'from-emerald-500 to-emerald-700',
 }
 
 export const RoleSidebar = ({

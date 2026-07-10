@@ -6,6 +6,7 @@ import { useAuth, useApiError } from '@/adapters/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { toast } from '@/components/ui/Toast'
+import { HowItWorksStrip } from '@/components/ui/HowItWorksStrip'
 import type { User } from '@/core'
 
 const DEMO_CLIENT: User = {
@@ -55,8 +56,18 @@ export const LoginClientPage = () => {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
+    <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 lg:py-16">
+      {/* Bandeau mobile */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="lg:hidden mb-8 relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-card"
+      >
+        <p className="font-display text-xl font-bold">Vos médicaments, à portée de clic.</p>
+        <p className="mt-1 font-body text-sm text-white/85">Commandez en ligne, retirez en pharmacie.</p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
         {/* Form */}
         <motion.div
           initial={{ opacity: 0, x: -16 }}
@@ -134,6 +145,13 @@ export const LoginClientPage = () => {
               <ShieldCheck size={10} /> Vous êtes un membre du personnel ?
             </Link>
           </p>
+
+          <div className="mt-8 lg:hidden">
+            <p className="font-medical text-2xs font-semibold text-slate-400 uppercase tracking-widest mb-3">
+              Comment ça marche
+            </p>
+            <HowItWorksStrip variant="client" />
+          </div>
         </motion.div>
 
         {/* Visual card */}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
@@ -15,6 +16,7 @@ import { QrCode } from '@/components/ui/QrCode'
 import { SearchBox } from '@/components/ui/SearchBox'
 import { Pagination } from '@/components/ui/Pagination'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { OrderStatusStepper } from '@/components/ui/OrderStatusStepper'
 import { toast } from '@/components/ui/Toast'
 import {
   formatDate, getStatutCommandeColor, getStatutCommandeLabel, getInitials,
@@ -301,7 +303,14 @@ export const CommandesPage = () => {
         <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-12 text-center shadow-soft">
           <ShoppingBag size={28} className="mx-auto text-slate-300" />
           <p className="mt-3 font-display text-base font-bold text-slate-900">Aucune commande</p>
-          <p className="mt-1 font-body text-sm text-slate-500">Aucune commande ne correspond à ce filtre.</p>
+          <p className="mt-1 font-body text-sm text-slate-500">
+            {isClientUser ? 'Vous n\'avez pas encore passé de commande.' : 'Aucune commande ne correspond à ce filtre.'}
+          </p>
+          {isClientUser && (
+            <Link to="/client/produits" className="inline-block mt-4">
+              <Button icon={<Pill size={14} />}>Parcourir le catalogue</Button>
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -429,6 +438,15 @@ export const CommandesPage = () => {
       >
         {selected && (
           <div className="space-y-4">
+            {isClientUser && (
+              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/30 p-4">
+                <p className="font-medical text-2xs font-semibold text-emerald-800 uppercase tracking-widest mb-3">
+                  Suivi de votre commande
+                </p>
+                <OrderStatusStepper statut={selected.statut} accent="emerald" />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3">
                 <p className="font-medical text-2xs text-slate-500 uppercase tracking-widest">Client</p>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pill, Search, Package2, ArrowUpDown, ShoppingCart, Plus, Edit2, Trash2, PackagePlus, AlertTriangle } from 'lucide-react'
+import { Pill, Search, Package2, ArrowUpDown, ShoppingCart, Plus, Edit2, Trash2, PackagePlus, AlertTriangle, Sparkles } from 'lucide-react'
 import { useAuth, useApiError, useMedicaments, usePermissions, useServices } from '@/adapters/react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Input } from '@/components/ui/Input'
@@ -30,6 +30,7 @@ export const ProduitsPage = () => {
   const { can } = usePermissions()
   const { getErrorMessage } = useApiError()
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<string>('ALL')
   const [sort, setSort] = useState<SortMode>('name-asc')
   const [page, setPage] = useState(1)
   const [modal, setModal] = useState<'create' | 'edit' | 'delete' | 'stock' | 'alertes' | null>(null)
@@ -87,6 +88,13 @@ export const ProduitsPage = () => {
   })
 
   const items = list.data ?? []
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    items.forEach((m) => { if (m.categorie?.trim()) set.add(m.categorie.trim()) })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'fr'))
+  }, [items])
+
   const alertes = items.filter((m) => {
     const q = m.stock?.quantite
     const seuil = m.stock?.seuilMinimum
@@ -102,12 +110,16 @@ export const ProduitsPage = () => {
 
   const filteredAndSorted = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = q
-      ? items.filter((m) =>
+    let filtered = items
+    if (category !== 'ALL') {
+      filtered = filtered.filter((m) => (m.categorie ?? '').trim() === category)
+    }
+    if (q) {
+      filtered = filtered.filter((m) =>
           m.nom.toLowerCase().includes(q) ||
           (m.categorie ?? '').toLowerCase().includes(q),
         )
-      : items
+    }
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sort) {
@@ -119,7 +131,7 @@ export const ProduitsPage = () => {
       }
     })
     return sorted
-  }, [items, query, sort])
+  }, [items, query, category, sort])
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -166,11 +178,34 @@ export const ProduitsPage = () => {
     setModal('stock')
   }
 
+  const changeCategory = (cat: string) => {
+    setCategory(cat)
+    setPage(1)
+  }
+
   return (
     <div className="space-y-6">
+      {isClientUser && (
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-r from-emerald-50 to-teal-50/60 p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 ring-1 ring-inset ring-emerald-200">
+              <Sparkles size={18} className="text-emerald-700" />
+            </div>
+            <div>
+              <p className="font-display text-sm font-bold text-emerald-900">Catalogue médicaments</p>
+              <p className="font-body text-xs text-emerald-800/80 mt-0.5 leading-relaxed">
+                Recherchez par nom ou catégorie, puis cliquez sur « Commander » pour passer votre commande.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PageHeader
-        title="Catalogue produits"
-        subtitle="Consultation optimisée des médicaments disponibles en base de données"
+        title={isClientUser ? 'Médicaments disponibles' : 'Catalogue produits'}
+        subtitle={isClientUser
+          ? 'Parcourez et commandez vos médicaments en quelques clics'
+          : 'Consultation et gestion des médicaments disponibles'}
         icon={<Pill size={20} />}
         actions={canManage && (
           <Button icon={<Plus size={15} />} onClick={openCreate}>
@@ -182,7 +217,7 @@ export const ProduitsPage = () => {
       <GlassCard variant="solid" className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3">
           <Input
-            label="Rechercher un produit"
+            label={isClientUser ? 'Rechercher un médicament' : 'Rechercher un produit'}
             value={query}
             onChange={(e) => changeQuery(e.target.value)}
             placeholder="Nom ou catégorie…"
@@ -191,10 +226,7 @@ export const ProduitsPage = () => {
 
           <div className="flex flex-wrap items-end gap-2">
             <Button variant={sort === 'name-asc' ? 'primary' : 'outline'} size="sm" onClick={() => changeSort('name-asc')}>
-              <ArrowUpDown size={13} /> Nom A-Z
-            </Button>
-            <Button variant={sort === 'name-desc' ? 'primary' : 'outline'} size="sm" onClick={() => changeSort('name-desc')}>
-              <ArrowUpDown size={13} /> Nom Z-A
+              <ArrowUpDown size={13} /> A-Z
             </Button>
             <Button variant={sort === 'price-asc' ? 'primary' : 'outline'} size="sm" onClick={() => changeSort('price-asc')}>
               Prix ↑
@@ -204,6 +236,36 @@ export const ProduitsPage = () => {
             </Button>
           </div>
         </div>
+
+        {isClientUser && categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => changeCategory('ALL')}
+              className={`rounded-full px-3 py-1.5 text-xs font-body font-medium transition-colors ${
+                category === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-soft'
+                  : 'border border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+              }`}
+            >
+              Toutes
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => changeCategory(cat)}
+                className={`rounded-full px-3 py-1.5 text-xs font-body font-medium transition-colors ${
+                  category === cat
+                    ? 'bg-emerald-600 text-white shadow-soft'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
 
         {list.isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -218,7 +280,10 @@ export const ProduitsPage = () => {
         ) : paged.length === 0 ? (
           <div className="rounded-2xl border border-slate-200/70 bg-white/60 p-10 text-center">
             <Package2 size={24} className="mx-auto text-slate-300" />
-            <p className="mt-2 text-sm text-slate-500">Aucun produit ne correspond à votre recherche.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">Aucun résultat</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {isClientUser ? 'Essayez une autre recherche ou catégorie.' : 'Aucun produit ne correspond à votre recherche.'}
+            </p>
           </div>
         ) : (
           <>
@@ -337,33 +402,53 @@ const ProduitCard = ({ item, isClient, canManage, isOrdering, onCommander, onEdi
   const outOfStock = (stock ?? 0) <= 0
 
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-soft hover:shadow-card transition-all">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-display text-sm font-bold text-slate-900 line-clamp-2">{item.nom}</h3>
-        {low && (
-          <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-2xs font-semibold">
-            Stock bas
-          </span>
-        )}
+    <div className={`rounded-2xl border bg-white p-4 shadow-soft transition-all hover:shadow-card ${
+      isClient ? 'border-slate-200/80 hover:border-emerald-200' : 'border-slate-200/80'
+    }`}>
+      <div className="flex items-start gap-3">
+        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ring-1 ring-inset ${
+          isClient ? 'bg-emerald-50 ring-emerald-200 text-emerald-700' : 'bg-teal-50 ring-teal-200 text-teal-700'
+        }`}>
+          <Pill size={16} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-display text-sm font-bold text-slate-900 line-clamp-2">{item.nom}</h3>
+            {low && !outOfStock && (
+              <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-2xs font-semibold flex-shrink-0">
+                Stock bas
+              </span>
+            )}
+            {outOfStock && isClient && (
+              <span className="rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 text-2xs font-semibold flex-shrink-0">
+                Indisponible
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-2xs font-medical uppercase tracking-wide text-slate-400">
+            {item.categorie ?? 'Non catégorisé'}
+          </p>
+        </div>
       </div>
-      <p className="mt-1 text-2xs text-slate-500">{item.categorie ?? 'Non catégorisé'}</p>
-      {item.description && <p className="mt-2 text-xs text-slate-600 line-clamp-2">{item.description}</p>}
+      {item.description && <p className="mt-2 text-xs text-slate-600 line-clamp-2 pl-[52px]">{item.description}</p>}
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-2">
-          <p className="text-slate-500">Prix CDF</p>
-          <p className="font-semibold text-slate-800">{Number(item.prixCDF ?? 0).toLocaleString('fr-FR')} CDF</p>
+        <div className={`rounded-xl border p-2.5 ${isClient ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-200/80'}`}>
+          <p className="text-slate-500 text-2xs">Prix CDF</p>
+          <p className="font-mono font-bold text-slate-800 mt-0.5">{Number(item.prixCDF ?? 0).toLocaleString('fr-FR')}</p>
         </div>
-        <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-2">
-          <p className="text-slate-500">Prix USD</p>
-          <p className="font-semibold text-slate-800">{Number(item.prixUSD ?? 0).toFixed(2)} $</p>
+        <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-2.5">
+          <p className="text-slate-500 text-2xs">Prix USD</p>
+          <p className="font-mono font-bold text-slate-800 mt-0.5">{Number(item.prixUSD ?? 0).toFixed(2)} $</p>
         </div>
       </div>
-      <div className="mt-2 text-2xs text-slate-500">
-        {stock !== undefined ? `Stock: ${stock} ${item.unite ?? 'u.'}` : 'Stock indisponible'}
-      </div>
+      {!isClient && (
+        <div className="mt-2 text-2xs text-slate-500">
+          {stock !== undefined ? `Stock: ${stock} ${item.unite ?? 'u.'}` : 'Stock indisponible'}
+        </div>
+      )}
       {isClient && (
         <Button
-          className="w-full mt-3"
+          className={`w-full mt-3 ${!outOfStock ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
           size="sm"
           icon={<ShoppingCart size={13} />}
           loading={isOrdering}

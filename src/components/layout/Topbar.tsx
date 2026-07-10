@@ -13,17 +13,28 @@ const defaultTitles: Record<string, string> = {
   '/admin':                          'Centre de contrôle',
   '/professionnel':                  'Espace professionnel',
   '/professionnel/tableau-de-bord':  'Tableau de bord',
-  '/professionnel/produits':         'Produits',
+  '/professionnel/produits':         'Médicaments',
   '/professionnel/utilisateurs':     'Personnel',
   '/professionnel/roles':            'Gestion des rôles',
   '/professionnel/commandes':        'Commandes clients',
   '/professionnel/file-attente':     "File d'attente",
+  '/professionnel/ventes':           'Ventes & CA',
   '/admin/utilisateurs':             'Personnel',
   '/admin/commandes':                'Commandes clients',
   '/client':                         'Mon espace',
   '/client/tableau-de-bord':         'Tableau de bord',
-  '/client/produits':                'Produits',
+  '/client/produits':                'Catalogue médicaments',
   '/client/commandes':               'Mes commandes',
+}
+
+const defaultSubtitles: Record<string, string> = {
+  '/client/tableau-de-bord':  'Vos commandes et raccourcis',
+  '/client/produits':          'Commandez vos médicaments en ligne',
+  '/client/commandes':         'Suivez le statut et votre QR de retrait',
+  '/professionnel/tableau-de-bord': 'Vue d\'ensemble des opérations',
+  '/professionnel/commandes':  'Validation et retrait des commandes',
+  '/professionnel/produits':   'Catalogue et gestion des stocks',
+  '/professionnel/file-attente': 'Clients en attente de service',
 }
 
 export const Topbar = ({ onMenuToggle, titles, notificationsPath }: TopbarProps) => {
@@ -31,9 +42,11 @@ export const Topbar = ({ onMenuToggle, titles, notificationsPath }: TopbarProps)
   const location = useLocation()
   const map = { ...defaultTitles, ...titles }
   const title = map[location.pathname] ?? 'PharmaDigital'
-
+  const contextualSubtitle = defaultSubtitles[location.pathname]
   const now = new Date()
   const greeting = now.getHours() < 12 ? 'Bonjour' : now.getHours() < 18 ? 'Bon après-midi' : 'Bonsoir'
+  const subtitle = contextualSubtitle
+    ?? `${greeting}${user?.prenom ? `, ${user.prenom}` : ''} — voici votre espace`
 
   return (
     <motion.header
@@ -57,7 +70,7 @@ export const Topbar = ({ onMenuToggle, titles, notificationsPath }: TopbarProps)
             {title}
           </h2>
           <p className="font-body text-xs text-slate-500 mt-1 truncate">
-            {greeting}{user?.prenom ? `, ${user.prenom}` : ''} — voici votre espace
+            {subtitle}
           </p>
         </div>
       </div>

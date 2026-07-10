@@ -6,6 +6,7 @@ import { useAuth, useApiError } from '@/adapters/react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { toast } from '@/components/ui/Toast'
+import { HowItWorksStrip } from '@/components/ui/HowItWorksStrip'
 
 export const RegisterClientPage = () => {
   const navigate = useNavigate()
@@ -51,9 +52,32 @@ export const RegisterClientPage = () => {
     }
   }
 
+  const pwStrength = (() => {
+    const p = form.motDePasse
+    if (!p) return 0
+    let s = 0
+    if (p.length >= 8) s++
+    if (/[A-Z]/.test(p)) s++
+    if (/[0-9]/.test(p)) s++
+    if (/[^A-Za-z0-9]/.test(p)) s++
+    return s
+  })()
+
+  const strengthLabel = ['', 'Faible', 'Moyen', 'Bon', 'Fort'][pwStrength]
+  const strengthColor = ['', 'bg-rose-400', 'bg-amber-400', 'bg-teal-400', 'bg-emerald-500'][pwStrength]
+
   return (
-    <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
+    <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 lg:py-16">
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="lg:hidden mb-8 relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-card"
+      >
+        <p className="font-display text-xl font-bold">Créez votre compte gratuit</p>
+        <p className="mt-1 font-body text-sm text-white/85">Inscription en moins de 30 secondes.</p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
         {/* Form */}
         <motion.div
           initial={{ opacity: 0, x: -16 }}
@@ -119,6 +143,21 @@ export const RegisterClientPage = () => {
               error={errors.motDePasse}
               autoComplete="new-password"
             />
+            {form.motDePasse && (
+              <div className="space-y-1.5">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-1 flex-1 rounded-full transition-colors ${i <= pwStrength ? strengthColor : 'bg-slate-200'}`}
+                    />
+                  ))}
+                </div>
+                <p className="font-body text-2xs text-slate-500">
+                  Force du mot de passe : <span className="font-semibold text-slate-700">{strengthLabel}</span>
+                </p>
+              </div>
+            )}
 
             <div className="flex items-start gap-2 pt-2">
               <Check size={13} className="mt-0.5 flex-shrink-0 text-teal-600" />
@@ -150,6 +189,10 @@ export const RegisterClientPage = () => {
               <ShieldCheck size={10} /> Membre du personnel ?
             </Link>
           </p>
+
+          <div className="mt-8 lg:hidden">
+            <HowItWorksStrip variant="client" />
+          </div>
         </motion.div>
 
         {/* Visual */}
